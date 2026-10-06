@@ -1,4 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- 파란 바탕 -->
   <rect width="64" height="64" rx="14" fill="#1d4ed8"/>
-  <text x="32" y="44" text-anchor="middle" font-family="Apple SD Gothic Neo, Malgun Gothic, sans-serif" font-size="34" font-weight="700" fill="#ffffff">답</text>
+  <!-- 뒷배경: 경찰 배지 느낌의 방패 + 별 (공식 경찰 상징을 그대로 쓰지 않은 일반 모양) -->
+  <g opacity="0.28" fill="#ffffff">
+    <path d="M32 6 L52 13 V30 C52 43 43.5 52 32 58 C20.5 52 12 43 12 30 V13 Z"/>
+  </g>
+  <g opacity="0.35" fill="#1d4ed8">
+    <path d="M32 15 L35.5 25.5 H46.5 L37.5 32 L41 42.5 L32 36 L23 42.5 L26.5 32 L17.5 25.5 H28.5 Z"/>
+  </g>
+  <!-- 앞: "현답" 글자 -->
+  <text x="32" y="39" text-anchor="middle" font-family="Apple SD Gothic Neo, Malgun Gothic, Noto Sans KR, sans-serif" font-size="21" font-weight="800" letter-spacing="-1" fill="#ffffff" stroke="#1e3a8a" stroke-width="0.8" paint-order="stroke">현답</text>
 </svg>
