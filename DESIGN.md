@@ -68,7 +68,7 @@
 | 기술 | 언제 | 쉬운 설명 1줄 | 상태 |
 |---|---|---|---|
 | **Vitest** | 작업 5 | 계산 규칙이 시험 사례대로 맞는지 버튼 하나로 자동 채점해 주는 도구 | ✅ Yuni 허용 |
-| **AI 서비스 SDK** (예: Claude API) | 작업 25 | 서버가 AI에게 "이 조문들 안에서만 답해"라고 질문을 보내고 답을 받는 연결 도구 | ⏳ 과정 안내 후 확정 |
+| **Vercel AI SDK** (`ai`) + 연결 부품 3개 (`@ai-sdk/openai`, `@ai-sdk/google`, `@ai-sdk/anthropic`) | 작업 25 | ChatGPT·Gemini·Claude를 **똑같은 방법 하나로** 부를 수 있게 해 주는 공통 연결 도구 (Vercel이 만들어 배포와도 잘 맞음) | ⏳ 작업 25에서 설치 확인 |
 | **Playwright** (선택) | 작업 39 | 사람 대신 브라우저를 열어 "등록 → 달력 → 결과" 순서로 눌러 보며 점검하는 로봇 | 선택 사항, 필요할 때 다시 여쭤봄 |
 
 > 데이터베이스·로그인 서비스(Supabase 등)는 **쓰지 않는다.** 저장은 브라우저 안에서 끝나고, 로그인은 비범위다.
@@ -146,6 +146,7 @@
 ┌──────────────────────────────┐
 │ 규정 찾기                       │
 │ 기준: 형법 외 6종 (2026.10.1 기준)│
+│ AI: [ChatGPT] [Gemini] [●Claude] │  ← AI 선택 (고른 것은 기기에 기억)
 ├──────────────────────────────┤
 │ (nice) [음주운전] [무면허운전]    │  ← 자주 묻는 질문 버튼
 ├──────────────────────────────┤
@@ -162,6 +163,7 @@
 - 개인정보가 감지되면 보내지 않고 입력창 위에 "개인정보(이름·주민등록번호·전화번호·차량번호)를 지우고 다시 물어봐 주세요" 표시.
 - 인터넷이 끊기면 "인터넷 연결이 끊어져 처리할 수 없습니다" 표시.
 - 대화 내용은 화면을 떠나면 사라진다(기기에 저장하지 않음).
+- **AI 선택**: 화면 위 3개 버튼 중 하나를 누르면 이후 질문은 그 AI로 간다. 고른 AI는 기기에 기억되고, 답변마다 "○○ 답변"으로 어느 AI가 답했는지 작게 표시한다. 서버에 키가 없는 AI는 "준비 중"으로 흐리게 표시해 누를 수 없다.
 
 ### 4.5 설정 화면 `/settings`
 
@@ -218,7 +220,7 @@
 | ④ 전송 | 브라우저 → 서버 | `POST /api/ask` 로 질문 문장만 보냄 | — |
 | ⑤ 재검사 | 서버 | ②와 같은 검사를 한 번 더 | 걸리면 400 |
 | ⑥ 조문 찾기 | 서버 | 질문의 낱말로 법령 조문을 점수 매겨 상위 몇 개(예: 8개)를 고름 | 후보 조문 |
-| ⑦ AI 호출 | 서버 | 후보 조문 + 규칙(문서 안에서만, 3문장 200자, 출처 필수, 현장 판단 여부 표시)을 AI에 보냄 | AI 답 |
+| ⑦ AI 호출 | 서버 | 사용자가 고른 AI(ChatGPT·Gemini·Claude)에 **같은 내용으로** 후보 조문 + 규칙(문서 안에서만, 3문장 200자, 출처 필수, 현장 판단 여부 표시)을 AI에 보냄 | AI 답 |
 | ⑧ 답 검사 | 서버 | 출처가 후보 조문에 실제로 있는지 확인. 없으면 "등록된 자료에서 찾을 수 없습니다"로 바꿈. 기준일 붙임 | 최종 답 |
 | ⑨ 표시 | 브라우저 | 답·출처·기준일, 현장 판단이면 고정 문구 | — |
 
@@ -238,8 +240,10 @@ interface SavedData {
   otherTeams: OtherTeam[];          // (nice) 최대 6팀
   memos: Memo[];                    // (nice)
   lastBackupAt: string | null;      // 마지막 백업 시각
+  aiProvider: AiProvider;           // 규정 찾기에서 고른 AI (기본 "claude")
 }
 
+type AiProvider = "chatgpt" | "gemini" | "claude";
 type Department = "지구대·파출소" | "형사" | "수사" | "사고조사" | "교통관리" | "교통안전";
 type ShiftKind = "주간" | "야간" | "심야" | "당직" | "일근";      // 근무하는 날
 type OffKind = "비번" | "휴무";                                  // 쉬는 날
@@ -298,13 +302,16 @@ interface LawDocument {
 
 **요청**
 ```json
-{ "question": "음주운전 기준이 뭐야?" }
+{ "question": "음주운전 기준이 뭐야?", "provider": "claude" }
 ```
+
+- `provider`: `"chatgpt"` | `"gemini"` | `"claude"` (사용자가 고른 AI)
 
 **응답 (200)**
 ```json
 {
   "kind": "answer",
+  "provider": "claude",
   "answer": "결론부터 3문장(200자) 이내 답변",
   "sources": [{ "law": "도로교통법", "article": "제44조" }],
   "baseDate": "2026-10-01",
@@ -325,7 +332,17 @@ interface LawDocument {
 |---|---|---|---|
 | 400 | `INVALID_QUESTION` | 빈 질문, 500자 초과 | "질문을 다시 입력해 주세요" |
 | 400 | `PERSONAL_INFO` | 개인정보 감지 | "개인정보를 지우고 다시 물어봐 주세요" |
-| 503 | `AI_UNAVAILABLE` | AI 서비스 오류·시간 초과 | "잠시 후 다시 시도해 주세요" |
+| 400 | `INVALID_PROVIDER` | 3곳 외의 AI 이름 | "AI를 다시 골라 주세요" |
+| 503 | `AI_NOT_CONFIGURED` | 고른 AI의 키가 서버에 없음 | "이 AI는 준비 중이에요. 다른 AI를 골라 주세요" |
+| 503 | `AI_UNAVAILABLE` | AI 서비스 오류·시간 초과 | "잠시 후 다시 시도해 주세요 (다른 AI를 골라도 돼요)" |
+
+### `GET /api/ask/providers`
+
+- 서버에 키가 준비된 AI 목록만 돌려준다. 키 값은 절대 돌려주지 않는다.
+
+```json
+{ "available": ["chatgpt", "gemini", "claude"] }
+```
 | (요청 실패) | — | 인터넷 끊김 | "인터넷 연결이 끊어져 처리할 수 없습니다" |
 
 ```json
@@ -336,7 +353,9 @@ interface LawDocument {
 
 ## 8. 보안
 
-- [ ] AI API 키는 `.env`에만, `process.env`로 **`lib/ai/` 서버 파일에서만** 읽는다. 그 파일 맨 위에 `import "server-only"`.
+- [ ] AI API 키 3개(`OPENAI_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, `ANTHROPIC_API_KEY`)는 `.env`에만, `process.env`로 **`lib/ai/` 서버 파일에서만** 읽는다. 그 파일 맨 위에 `import "server-only"`.
+- [ ] 사용자에게 API 키를 입력받지 않는다. 사용자는 AI **이름만** 고른다.
+- [ ] 사용할 모델 이름도 `.env`(예: `AI_MODEL_CLAUDE`)로 바꿀 수 있게 해, 모델이 바뀌어도 코드를 고치지 않는다.
 - [ ] 키 이름에 `NEXT_PUBLIC_` 금지. 배포 시 Vercel 환경변수에 입력.
 - [ ] 서버는 질문 문장을 **로그에 남기지 않는다.** 저장하지도 않는다.
 - [ ] 개인정보 검사는 브라우저와 서버 **두 번** 한다.
@@ -355,7 +374,7 @@ interface LawDocument {
 | 시험 사례 10건 | 한 달 전체 계산 결과 | Vitest | 작업 14 (Claude 초안 → Yuni 검토) |
 | 개인정보 감지 시험 | `lib/privacy` | Vitest | 작업 28 |
 | 조문 찾기 시험 | `lib/laws/search` | Vitest | 작업 27 |
-| 정답표 20문항 | `/api/ask` 실제 호출 | 스크립트 또는 수동 | 작업 32 |
+| 정답표 20문항 | `/api/ask` 실제 호출, **AI 3곳 각각** (각 18/20 이상) | 스크립트 또는 수동 | 작업 32 |
 | 화면 점검 | 등록 → 달력 → 결과 → 질문 | 브라우저 직접 확인 (선택: Playwright) | 작업 39 |
 
 ### 9.2 꼭 들어갈 계산 시험 사례 (10건 초안의 뼈대)
@@ -399,6 +418,7 @@ app/
   settings/page.tsx       # 설정 화면
   memo/page.tsx           # (nice) 메모
   api/ask/route.ts        # AI 답변 창구 (서버)
+  api/ask/providers/route.ts  # 키가 준비된 AI 목록 (서버)
   manifest.ts             # (nice) 홈 화면 추가 정보
 components/
   BottomNav.tsx           # 하단 메뉴
@@ -418,7 +438,8 @@ lib/
   privacy/detect.ts       # 개인정보 감지 (브라우저·서버 공용)
   laws/load.ts            # 법령 파일 읽기 (서버)
   laws/search.ts          # 조문 낱말 검색 (서버)
-  ai/answer.ts            # AI 호출과 답 검사 (서버 전용, server-only)
+  ai/providers.ts         # AI 3곳 연결·키 준비 여부 (서버 전용, server-only)
+  ai/answer.ts            # 공통 규칙으로 AI 호출, 답 검사 (서버 전용, server-only)
 data/laws/                # 법령 7종 JSON
 tests/overtime-cases.test.ts  # 시험 사례 10건
 ```
@@ -450,7 +471,7 @@ tests/overtime-cases.test.ts  # 시험 사례 10건
 | 2 | `feature/overtime-engine` | module-2 |
 | 3 | `feature/setup` | module-3 |
 | 4 | `feature/calendar` | module-4 |
-| 5 | `feature/ask` | module-5 (AI 서비스 확정 후) |
+| 5 | `feature/ask` | module-5 |
 | 6 | `feature/nice-*` | module-6 (must 완료 후) |
 | 7 | `feature/release` | module-7 |
 
@@ -458,7 +479,7 @@ tests/overtime-cases.test.ts  # 시험 사례 10건
 
 ## 12. 남은 확인 사항 (구현 중 Yuni 확인 필요)
 
-1. **AI 서비스**: 과정 안내를 받으면 작업 25에서 확정.
+1. **AI 키 준비**: 작업 25 전에 Yuni가 OpenAI·Google·Anthropic 세 곳에서 API 키를 발급받아 `.env`에 넣는다. (요금은 각 서비스에 따로 청구됨)
 
 ### 확정됨 (2026-10-06)
 
@@ -466,6 +487,7 @@ tests/overtime-cases.test.ts  # 시험 사례 10건
 - **패턴 5(일근)**: 09:00~18:00 고정, 식사 공제 후 8시간. 등록 3단계(근무 시간)를 건너뛰고, 일근 초과근무 입력은 받지 않는다.
 - **전부 야간인 근무(평시 1시간 미만)**: 근무 종류별 [식사시간 공제] 체크로 공제 여부 선택. 체크 시 근무 전체의 가운데 1시간 공제.
 - **형사 등 부서 야간·당직**: 시작·종료 시간을 직접 선택, 패턴대로 반복, 변경은 [변경]으로.
+- **AI 서비스**: ChatGPT·Gemini·Claude 중 사용자가 규정 찾기 화면에서 선택. 키 3개는 서버 `.env`에 보관, Vercel AI SDK로 공통 호출.
 
 ---
 
@@ -476,3 +498,4 @@ tests/overtime-cases.test.ts  # 시험 사례 10건
 | 0.1 | 2026-10-06 | 초안 (설계안 C, 낱말 검색 선택) | Claude / Yuni |
 | 0.2 | 2026-10-06 | 법령 7종으로 확대, 패턴 5 일근 09:00~18:00 고정 | Claude / Yuni |
 | 0.3 | 2026-10-06 | 전부 야간 근무의 식사 공제 체크, 형사 등 부서 야간·당직 시작·종료 직접 선택 | Claude / Yuni |
+| 0.4 | 2026-10-06 | AI 서비스를 ChatGPT·Gemini·Claude 중 사용자 선택으로 확정 | Claude / Yuni |
