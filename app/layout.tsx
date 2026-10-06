@@ -2,6 +2,7 @@
 // Plan: 작업 1 — lang="ko", 앱 이름 "현답" 메타데이터, 한글 글꼴, 모바일 뷰포트
 import type { Metadata, Viewport } from "next";
 import { Noto_Sans_KR } from "next/font/google";
+import BottomNav from "@/components/BottomNav";
 import "./globals.css";
 
 // 한글 글꼴(Noto Sans KR). 한글 글자는 필요한 만큼만 나눠 받아 처음 로딩을 가볍게 한다.
@@ -30,7 +31,13 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="ko" className={`${notoSansKr.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {/* 화면 내용: 스마트폰 폭 기준, 아래쪽은 하단 메뉴에 가리지 않게 여백을 둔다 */}
+        <main className="mx-auto w-full max-w-md flex-1 px-4 pt-6 pb-[calc(5rem+env(safe-area-inset-bottom))]">
+          {children}
+        </main>
+        <BottomNav />
+      </body>
     </html>
   );
 }
