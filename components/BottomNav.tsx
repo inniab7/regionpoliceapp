@@ -1,4 +1,4 @@
-// Design Ref: §4.1 — 하단 메뉴(초과근무 / 규정 찾기 / 설정)는 모든 화면에 항상 표시
+// Design Ref: §4.1 — 하단 메뉴(초과근무 / 규정 찾기 / 설정). 첫 등록(/setup)에서만 숨긴다.
 // Plan: 작업 2 — 공통 화면 틀
 "use client";
 
@@ -8,6 +8,8 @@ import { usePathname } from "next/navigation";
 type NavItem = {
   href: string;
   label: string;
+  // 이 메뉴가 선택된 것으로 볼 주소들 (설정 안에서 들어가는 화면 포함)
+  matches: string[];
   icon: React.ReactNode;
 };
 
@@ -16,6 +18,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     href: "/",
     label: "초과근무",
+    matches: ["/"],
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="h-6 w-6">
         <rect x="3" y="4" width="18" height="17" rx="2" />
@@ -26,6 +29,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     href: "/ask",
     label: "규정 찾기",
+    matches: ["/ask"],
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="h-6 w-6">
         <circle cx="11" cy="11" r="7" />
@@ -36,6 +40,8 @@ const NAV_ITEMS: NavItem[] = [
   {
     href: "/settings",
     label: "설정",
+    // [변경](/setup/change)과 메모(/memo)는 설정에서 들어가는 화면이라 "설정"이 선택돼 보이게 한다.
+    matches: ["/settings", "/setup", "/memo"],
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="h-6 w-6">
         <circle cx="12" cy="12" r="3" />
@@ -46,13 +52,17 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 // 지금 주소가 메뉴 항목에 해당하는지 확인한다. "/"는 정확히 같을 때만 선택으로 본다.
-function isActive(pathname: string, href: string) {
-  if (href === "/") return pathname === "/";
-  return pathname === href || pathname.startsWith(`${href}/`);
+function isActive(pathname: string, item: NavItem) {
+  return item.matches.some((path) =>
+    path === "/" ? pathname === "/" : pathname === path || pathname.startsWith(`${path}/`),
+  );
 }
 
 export default function BottomNav() {
   const pathname = usePathname();
+
+  // 첫 등록 화면에서는 메뉴를 숨겨 등록을 끝까지 마치게 한다. ([변경]은 /setup/change라 메뉴가 보인다)
+  if (pathname === "/setup") return null;
 
   return (
     <nav
@@ -61,13 +71,13 @@ export default function BottomNav() {
     >
       <ul className="mx-auto flex max-w-md">
         {NAV_ITEMS.map((item) => {
-          const active = isActive(pathname, item.href);
+          const active = isActive(pathname, item);
           return (
             <li key={item.href} className="flex-1">
               <Link
                 href={item.href}
                 aria-current={active ? "page" : undefined}
-                className={`flex h-16 flex-col items-center justify-center gap-1 text-sm ${
+                className={`flex h-16 flex-col items-center justify-center gap-1 text-base ${
                   active
                     ? "font-bold text-blue-700 dark:text-blue-400"
                     : "text-zinc-500 dark:text-zinc-400"

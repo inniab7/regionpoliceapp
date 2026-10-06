@@ -3,13 +3,15 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  /* 입력칸·스크롤바 같은 브라우저 기본 부품도 밝은/어두운 모드를 따르게 한다 */
+  color-scheme: light dark;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  /* 기본 글꼴: 한글 글꼴(Noto Sans KR), 없으면 기기 기본 글꼴 */
-  --font-sans: var(--font-noto-sans-kr), system-ui, sans-serif;
+  /* 기본 글꼴은 여기 한 곳에서만 정한다. 대체 글꼴(기기 한글 글꼴)은 app/layout.tsx의 fallback에 들어 있다 */
+  --font-sans: var(--font-noto-sans-kr);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -22,5 +24,4 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-noto-sans-kr), system-ui, sans-serif;
 }

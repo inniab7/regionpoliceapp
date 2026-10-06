@@ -1,36 +1,35 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 현답
 
-## Getting Started
+> 답이 있는 현장 근무자를 위하여
 
-First, run the development server:
+지구대·파출소·교대근무 경찰관을 위한 스마트폰 웹앱입니다.
+
+- **초과근무 자동 산출**: 근무 패턴으로 한 달 근무표를 만들고 기본 초과·야간·휴일·합계 4줄로 계산합니다.
+- **규정·매뉴얼 AI 질의응답**: 등록된 공개 법령 안에서만, 출처와 기준일을 붙여 답합니다. AI는 사용자가 본인 API 키로 연결합니다.
+
+## 문서
+
+| 문서 | 내용 |
+|---|---|
+| [PRD.md](PRD.md) | 기획서 (기준 문서, 계산 규칙 1~17) |
+| [PLAN.md](PLAN.md) | 만들 순서 (작업 1~40) |
+| [DESIGN.md](DESIGN.md) | 화면·데이터·기술 설계 |
+| [CLAUDE.md](CLAUDE.md) | 작업 규칙 |
+
+## 실행
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+브라우저에서 http://localhost:3000 을 엽니다.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run lint     # 코드 검사
+npm run build    # 배포용 빌드
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 기술
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS 4 · 배포: Vercel

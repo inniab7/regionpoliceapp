@@ -3,7 +3,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "설정 | 현답",
+  title: "설정",
 };
 
 export default function SettingsPage() {
