@@ -11,7 +11,7 @@ export const AI_MODELS: Record<AiProvider, string> = {
 
 /** 답이 길지 않으므로 넉넉히만 (추론하는 모델은 생각하는 데도 쓴다) */
 const MAX_OUTPUT_TOKENS = 2000;
-const DEFAULT_TIMEOUT_MS = 45_000;
+const DEFAULT_TIMEOUT_MS = 30_000; // DESIGN 7.3: 30초 안에 답이 없으면 "잠시 후 다시 시도해 주세요"
 
 export type CallFailureReason = "invalid-key" | "limit" | "offline" | "timeout" | "unreachable" | "model" | "bad-response" | "unknown";
 
