@@ -1,7 +1,7 @@
 // lib/laws/ 시험 — 원문 변환, 검사, 그리고 public/laws/ 에 실제로 들어 있는 7종 파일 점검
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { cleanAnnexLine, convertLaw, findLawSerial, toIsoDate } from "./convert";
+import { cleanAnnexLines, convertLaw, findLawSerial, toIsoDate } from "./convert";
 import { DEFAULT_LAWS, parseLawDocument, parseLawIndex } from "./types";
 
 const readJson = (file: string): unknown => JSON.parse(readFileSync(`public/laws/${file}`, "utf8"));
@@ -73,18 +73,33 @@ describe("원문 변환 (convertLaw)", () => {
 });
 
 describe("별표(표) 변환", () => {
-  it("테두리 줄은 버리고, 칸은 | 로 나누며, 빈 칸 자리는 지킨다", () => {
-    expect(cleanAnnexLine("┏━━━━┯━━━━┓")).toBeNull();
-    expect(cleanAnnexLine("┠────┼────┨")).toBeNull();
-    expect(cleanAnnexLine("┃                    │          ┃")).toBeNull();
-    expect(cleanAnnexLine("┃1. 속도위반(60㎞/h 초과)   │제17조제3항   │1) 승합자동차등: 13만원 ┃")).toBe(
-      "1. 속도위반(60㎞/h 초과) | 제17조제3항 | 1) 승합자동차등: 13만원",
-    );
-    expect(cleanAnnexLine("┃          │            │2) 승용자동차등: 12만원 ┃")).toBe(" |  | 2) 승용자동차등: 12만원");
+  it("테두리 줄은 버리고, 칸은 | 로 나눈다", () => {
+    const lines = ["┏━━━━┯━━━━┓", "┃항목 │금액┃", "┠────┼────┨", "┃가   │1만원 ┃", "┗━━━━┷━━━━┛"];
+    expect(cleanAnnexLines(lines)).toEqual(["항목 | 금액", "가 | 1만원"]);
   });
-  it("표가 아닌 줄은 앞뒤 공백만 정리한다", () => {
-    expect(cleanAnnexLine("   ■ 시험법 [별표 1]   ")).toBe("■ 시험법 [별표 1]");
-    expect(cleanAnnexLine("      ")).toBeNull();
+  it("여러 행위가 금액칸 하나를 함께 쓰면 한 줄로 묶는다 (금액이 엉뚱한 행위에 붙어 보이지 않게)", () => {
+    const lines = [
+      "┏━━━━━┯━━━━┯━━━━━┓",
+      "┃범칙행위 │근거 │금액 ┃",
+      "┠─────┼────┼─────┨",
+      "┃4. 신호위반 │제5조 │1) 승합: 7만원 ┃",
+      "┃5. 중앙선 │제13조 │2) 승용: 6만원 ┃",
+      "┃침범 │ │ ┃",
+      "┠─────┼────┼─────┨",
+      "┃6. 보행자 │제27조 │1) 승합: 3만원 ┃",
+      "┗━━━━━┷━━━━┷━━━━━┛",
+    ];
+    expect(cleanAnnexLines(lines)).toEqual([
+      "범칙행위 | 근거 | 금액",
+      "4. 신호위반 / 5. 중앙선 침범 | 제5조 제13조 | 1) 승합: 7만원 / 2) 승용: 6만원",
+      "6. 보행자 | 제27조 | 1) 승합: 3만원",
+    ]);
+  });
+  it("줄마다 칸 수가 다르면 합치지 않고 줄 단위로 둔다", () => {
+    expect(cleanAnnexLines(["┃가 │나┃", "┃다┃"])).toEqual(["가 | 나", "다"]);
+  });
+  it("표가 아닌 줄은 앞뒤 공백만 정리하고 빈 줄은 뺀다", () => {
+    expect(cleanAnnexLines(["   ■ 시험법 [별표 1]   ", "      ", "본문"])).toEqual(["■ 시험법 [별표 1]", "본문"]);
   });
 
   const withAnnex = {

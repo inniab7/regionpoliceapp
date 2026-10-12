@@ -61,23 +61,66 @@ function convertArticle(unit: unknown): LawArticle | null {
 /** 표 테두리(┏━┯┓ 등)만 있는 줄인지 */
 const BORDER_ONLY = /^[\s┏┓┗┛┠┨┯┷┼┬┴┣┫╋━─┃│]*$/;
 
+/** 표 안에서 새 항목이 시작하는 줄인지 ("4. …", "5의2. …", "1) …", "가. …", "① …") */
+const NEW_ITEM = /^(\d+(의\d+)?\.|\d+\)|[가-하]\.|[①-⑳])/;
+
+/** 표 칸 하나의 글자를 정리한다 */
+function cellText(c: string): string {
+  return c.replace(/\s+/g, " ").trim();
+}
+
 /**
- * 별표 표 한 줄을 읽기 쉽게 바꾼다. 줄 단위로 칸 맞춤을 그대로 두어
- * "범칙행위 | 근거 | 금액"처럼 같은 줄의 칸이 같은 항목에 속하게 한다.
- * 테두리만 있는 줄과 내용 없는 줄은 뺀다.
+ * 표의 한 묶음(┠ 줄 사이)을 한 줄로 합친다.
+ * 별표는 여러 행위가 금액칸 하나를 함께 쓰는 경우가 많다(칸 합치기). 줄마다 나열하면 금액이 엉뚱한 행위 줄에 붙어 보이므로,
+ * 묶음 안의 칸을 세로로 이어 "행위들 | 근거 조문 | 금액들"로 만든다. 같은 칸 안의 항목은 " / "로 나눈다.
+ * 줄마다 칸 수가 다르면(안쪽 표 등) 합치지 않고 줄 단위로 둔다.
  */
-export function cleanAnnexLine(line: string): string | null {
-  if (BORDER_ONLY.test(line)) return null;
-  if (!/[┃│]/.test(line)) return line.trim() === "" ? null : line.trim();
-  const cells = line
-    .split(/[┃│]/)
-    .map((c) => c.replace(/\s+/g, " ").trim());
-  // 줄 맨 앞·맨 뒤 테두리(┃) 때문에 생긴 칸 하나씩만 버리고, 비어 있는 안쪽 칸은 자리를 지킨다
-  // (그래야 "| | 2) 승용…"처럼 몇 번째 칸의 내용인지 알 수 있다)
-  if (/^\s*[┃│]/.test(line)) cells.shift();
-  if (/[┃│]\s*$/.test(line)) cells.pop();
-  if (cells.every((c) => c === "")) return null;
-  return cells.join(" | ");
+function mergeTableBlock(block: string[][]): string[] {
+  if (block.length === 0) return [];
+  const cols = Math.max(...block.map((r) => r.length));
+  if (block.some((r) => r.length !== cols)) {
+    return block.map((r) => r.map(cellText).join(" | ")).filter((l) => l.replace(/[\s|]/g, "") !== "");
+  }
+  const merged: string[] = [];
+  for (let c = 0; c < cols; c++) {
+    const segments: string[] = [];
+    for (const row of block) {
+      const t = cellText(row[c]);
+      if (t === "") continue;
+      if (segments.length === 0 || NEW_ITEM.test(t)) segments.push(t);
+      else segments[segments.length - 1] += ` ${t}`;
+    }
+    merged.push(segments.join(" / "));
+  }
+  return merged.every((m) => m === "") ? [] : [merged.join(" | ")];
+}
+
+/** 별표 본문 줄들을 읽기 쉽게 바꾼다 (표는 묶음 단위로, 표가 아닌 줄은 그대로) */
+export function cleanAnnexLines(lines: string[]): string[] {
+  const out: string[] = [];
+  let block: string[][] = [];
+  const flush = () => {
+    out.push(...mergeTableBlock(block));
+    block = [];
+  };
+  for (const line of lines) {
+    if (BORDER_ONLY.test(line)) {
+      // ┠(묶음 사이 가로줄), ┏(표 시작), ┗(표 끝)이면 지금까지 모은 묶음을 마무리한다. 빈 칸만 있는 줄은 건너뛴다
+      if (/[┠┏┗┣╋]/.test(line)) flush();
+      continue;
+    }
+    if (/[┃│]/.test(line)) {
+      const cells = line.split(/[┃│]/);
+      if (/^\s*[┃│]/.test(line)) cells.shift();
+      if (/[┃│]\s*$/.test(line)) cells.pop();
+      block.push(cells);
+    } else {
+      flush();
+      if (line.trim() !== "") out.push(line.trim());
+    }
+  }
+  flush();
+  return out;
 }
 
 /** 별표 한 건 → LawArticle (예: no "별표 8"). 삭제된 별표나 내용 없는 별표는 null */
@@ -89,9 +132,7 @@ function convertAnnex(unit: unknown): LawArticle | null {
   if (!Number.isFinite(num)) return null;
   const branch = parseInt(String(unit["별표가지번호"] ?? "0"), 10);
   const no = `별표 ${num}${branch > 0 ? `의${branch}` : ""}`;
-  const lines = flattenStrings(unit["별표내용"], false)
-    .map(cleanAnnexLine)
-    .filter((l): l is string => l !== null);
+  const lines = cleanAnnexLines(flattenStrings(unit["별표내용"], false));
   if (lines.length === 0) return null;
   return { no, title, text: lines.join("\n") };
 }
