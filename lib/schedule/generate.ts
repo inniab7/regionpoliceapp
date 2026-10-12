@@ -3,7 +3,7 @@
 // 순수 함수: 저장소·현재 시각을 쓰지 않는다. 공휴일 목록은 호출하는 쪽에서 넘긴다.
 import { addDays, datesInMonth, diffDays, isWeekend, weekStart } from "../time";
 import type { DateString, DayKind, Profile, TimeRange } from "../types";
-import { DAY_SHIFT_FIXED_TIME, PATTERNS } from "./patterns";
+import { DAY_SHIFT_FIXED_TIME, DUTY_DEFAULT_TIME, PATTERNS } from "./patterns";
 
 /** 하루의 정해진 근무 (근무 변경을 반영하기 전) */
 export interface PlannedDay {
@@ -13,7 +13,7 @@ export interface PlannedDay {
   /** 근무 종류. 등록 정보가 없는 날은 null */
   kind: DayKind | null;
   /**
-   * 정해진 근무시간. 쉬는 날·당직(시간외 계산 없음, 규칙 12)은 null.
+   * 정해진 근무시간. 쉬는 날은 null. 당직은 24시간 근무(기본 09:00 시작, 규칙 12).
    * 근무하는 날인데 등록된 시간이 없으면 null → 계산 단계에서 재입력 안내
    */
   time: TimeRange | null;
@@ -53,10 +53,13 @@ function timeFor(profile: Profile, kind: DayKind): TimeRange | null {
     case "야간":
     case "심야":
       return profile.shiftTimes[kind] ?? null;
+    case "당직":
+      // 당직은 24시간 근무. 등록한 시작 시각이 없으면 기본 09:00 (규칙 12)
+      return profile.shiftTimes.당직 ?? DUTY_DEFAULT_TIME;
     case "일근":
       return DAY_SHIFT_FIXED_TIME;
     default:
-      // 당직(시간외 계산 없음)·비번·휴무
+      // 비번·휴무
       return null;
   }
 }

@@ -50,11 +50,17 @@ export const DAY_KIND_SHORT: Record<DayKind, string> = {
   휴무: "휴",
 };
 
-const TIMED_KINDS: readonly TimedShiftKind[] = ["주간", "야간", "심야"];
+/**
+ * 당직 기본 시간: 09:00 시작, 종료 = 시작이므로 다음 날 09:00까지 24시간 (규칙 11·12).
+ * 사용자가 등록 때 시작 시각을 10분 단위로 바꿀 수 있다 (종료는 늘 시작과 같다).
+ */
+export const DUTY_DEFAULT_TIME: TimeRange = { start: "09:00", end: "09:00" };
+
+const TIMED_KINDS: readonly TimedShiftKind[] = ["주간", "야간", "심야", "당직"];
 
 /**
- * 그 패턴에서 시작·종료 시간을 입력받아야 하는 근무 종류 (등록 3단계용).
- * 당직·일근은 시간 입력이 없으므로 빠진다 (규칙 12·13).
+ * 그 패턴에서 시간을 입력받아야 하는 근무 종류 (등록 3단계용).
+ * 일근은 09:00~18:00 고정이라 빠진다 (규칙 13). 당직은 시작 시각만 받는다 (규칙 12).
  */
 export function timedKindsInPattern(pattern: PatternId): TimedShiftKind[] {
   const cycle = PATTERNS[pattern].cycle ?? [];

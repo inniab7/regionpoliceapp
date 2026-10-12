@@ -89,6 +89,12 @@ describe("모양 검사 (백업 불러오기에서도 사용)", () => {
     expect(parseSavedData(JSON.parse(JSON.stringify(data)))).toEqual(data);
   });
 
+  it("당직은 종료 = 시작(24시간)이면 통과", () => {
+    const duty = { ...patrol, pattern: 4 as const, shiftTimes: { 당직: { start: "08:30", end: "08:30" } } };
+    const data = { ...sampleData(), profiles: [duty] };
+    expect(parseSavedData(JSON.parse(JSON.stringify(data)))).toEqual(data);
+  });
+
   it("모르는 항목은 버린다", () => {
     const withExtra = { ...sampleData(), hacked: "x" };
     expect(parseSavedData(withExtra)).not.toHaveProperty("hacked");
@@ -100,7 +106,7 @@ describe("모양 검사 (백업 불러오기에서도 사용)", () => {
     ["없는 패턴", { profiles: [{ ...patrol, pattern: 6 }] }],
     ["패턴 1~4인데 시작일 없음", { profiles: [{ ...patrol, patternStartDate: undefined }] }],
     ["10분 단위가 아닌 시각", { profiles: [{ ...patrol, shiftTimes: { 주간: { start: "09:15", end: "18:00" } } }] }],
-    ["당직에 시간 입력", { profiles: [{ ...patrol, shiftTimes: { 당직: { start: "09:00", end: "09:00" } } }] }],
+    ["당직 종료가 시작과 다름(24시간이 아님)", { profiles: [{ ...patrol, shiftTimes: { 당직: { start: "09:00", end: "18:00" } } }] }],
     ["없는 날짜의 변경", { overrides: { "2026-02-30": { replace: { type: "휴가" } } } }],
     ["시간 없는 교육·출장", { overrides: { "2026-10-13": { replace: { type: "교육출장" } } } }],
     ["잘못된 공휴일", { holidaysAdded: ["어제"] }],

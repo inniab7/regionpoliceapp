@@ -115,9 +115,8 @@ export function calculateMonth(input: MonthInput): MonthResult {
       const r = buildShift(date, entry.replace);
       if (r.ok) shifts.push(r.shift);
       else issue(date, "INVALID_TIME", `${formatShortDate(date)} 교육·출장 시간을 다시 입력해 주세요.`);
-    } else if (planned.kind === "당직") {
-      creditDay = true; // 당직은 시간외로 계산하지 않고 8시간만 (규칙 12)
     } else if (isWorkDay) {
+      // 당직(패턴 4)도 여기서 24시간 근무 1회로 계산된다 (규칙 12)
       if (planned.time) {
         const r = buildShift(date, planned.time);
         if (r.ok) shifts.push(r.shift);
