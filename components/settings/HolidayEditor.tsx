@@ -3,8 +3,8 @@
 "use client";
 
 import { useState } from "react";
-import { addHoliday, holidayRowsForYear, removeHoliday, restoreHoliday, type AddHolidayResult } from "@/lib/holidays/edit";
-import { BUILT_IN_HOLIDAYS } from "@/lib/holidays/kr";
+import { addHoliday, countHolidaysForYear, holidayRowsForYear, removeHoliday, restoreHoliday, type AddHolidayResult } from "@/lib/holidays/edit";
+import { BUILT_IN_HOLIDAYS, COMPUTED_FROM_YEAR } from "@/lib/holidays/kr";
 import { changeAppData, useAppData } from "@/lib/storage/useAppData";
 import { formatShortDate, isValidDate, todayInKst } from "@/lib/time";
 
@@ -23,19 +23,35 @@ const SAVE_MESSAGES = {
   unavailable: "이 브라우저에서는 정보를 저장할 수 없어요.",
 } as const;
 
-const BUILT_IN_YEARS = [...new Set(Object.keys(BUILT_IN_HOLIDAYS).map((d) => d.slice(0, 4)))].join("·");
+const BUILT_IN_YEAR_LIST = [...new Set(Object.keys(BUILT_IN_HOLIDAYS).map((d) => Number(d.slice(0, 4))))].sort((a, b) => a - b);
+const BUILT_IN_RANGE = `${BUILT_IN_YEAR_LIST[0]}~${BUILT_IN_YEAR_LIST.at(-1)}`;
+
+/** 처음에 보여 주는 줄 수. 나머지는 [더보기]를 눌러야 보인다 */
+const VISIBLE_ROWS = 3;
 
 export default function HolidayEditor() {
   const app = useAppData();
   const [year, setYear] = useState(() => Number(todayInKst(new Date()).slice(0, 4)));
   const [date, setDate] = useState("");
   const [message, setMessage] = useState<{ text: string; kind: "error" | "ok" } | null>(null);
+  // [더보기]로 펼친 해 (해를 바꾸면 다시 3줄만 보인다)
+  const [expandedYear, setExpandedYear] = useState<number | null>(null);
+
+  /** 보는 해를 바꾼다. 펼쳐 둔 목록은 접는다 */
+  function goToYear(next: number) {
+    setYear(next);
+    setExpandedYear(null);
+  }
 
   if (app.status !== "ok") {
     return <p className="text-base text-zinc-600 dark:text-zinc-400">근무를 등록하면 공휴일을 편집할 수 있어요.</p>;
   }
   const data = app.data;
   const rows = holidayRowsForYear(data, year);
+  const count = countHolidaysForYear(data, year);
+  const expanded = expandedYear === year;
+  const shownRows = expanded ? rows : rows.slice(0, VISIBLE_ROWS);
+  const hiddenCount = rows.length - shownRows.length;
 
   /** 저장하고 실패하면 안내 */
   function apply(updater: Parameters<typeof changeAppData>[0]): boolean {
@@ -59,7 +75,7 @@ export default function HolidayEditor() {
       return;
     }
     if (apply((d) => addHoliday(d, date).data)) {
-      setYear(Number(date.slice(0, 4))); // 추가한 날이 있는 해로 목록을 옮겨 바로 보이게 한다
+      goToYear(Number(date.slice(0, 4))); // 추가한 날이 있는 해로 목록을 옮겨 바로 보이게 한다 (3줄 안에 없으면 [더보기]로 볼 수 있다)
       setMessage({ text: `${formatShortDate(date)}을 ${result === "restored" ? "다시 공휴일로 되돌렸어요" : "공휴일로 추가했어요"}.`, kind: "ok" });
       setDate("");
     }
@@ -71,18 +87,18 @@ export default function HolidayEditor() {
       <div className="flex items-center justify-between gap-2">
         <button
           type="button"
-          onClick={() => setYear(year - 1)}
+          onClick={() => goToYear(year - 1)}
           aria-label="이전 해"
           className="flex h-12 w-12 items-center justify-center rounded-lg border border-zinc-300 text-xl dark:border-zinc-600"
         >
           ◀
         </button>
         <p className="text-lg font-bold" aria-live="polite">
-          {year}년 공휴일
+          {year}년 공휴일 <span className="text-red-600 dark:text-red-400">({count}일)</span>
         </p>
         <button
           type="button"
-          onClick={() => setYear(year + 1)}
+          onClick={() => goToYear(year + 1)}
           aria-label="다음 해"
           className="flex h-12 w-12 items-center justify-center rounded-lg border border-zinc-300 text-xl dark:border-zinc-600"
         >
@@ -92,11 +108,11 @@ export default function HolidayEditor() {
 
       {rows.length === 0 ? (
         <p className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">
-          {year}년 공휴일은 앱에 들어 있지 않아요(내장: {BUILT_IN_YEARS}년). 평일 공휴일을 아래에서 직접 추가해 주세요.
+          {year}년 공휴일은 앱에 들어 있지 않아요(내장: {BUILT_IN_RANGE}년). 평일 공휴일을 아래에서 직접 추가해 주세요.
         </p>
       ) : (
         <ul className="mt-3 divide-y divide-zinc-200 rounded-lg border border-zinc-300 dark:divide-zinc-700 dark:border-zinc-600">
-          {rows.map((row) => (
+          {shownRows.map((row) => (
             <li key={row.date} className="flex items-center gap-2 px-3 py-2">
               <div className={`min-w-0 flex-1 text-base ${row.removed ? "text-zinc-500 line-through dark:text-zinc-500" : ""}`}>
                 <span className="font-bold">{formatShortDate(row.date)}</span>{" "}
@@ -131,6 +147,23 @@ export default function HolidayEditor() {
             </li>
           ))}
         </ul>
+      )}
+
+      {rows.length > VISIBLE_ROWS && (
+        <button
+          type="button"
+          onClick={() => setExpandedYear(expanded ? null : year)}
+          aria-expanded={expanded}
+          className="mt-2 h-12 w-full rounded-lg border border-zinc-300 text-base font-bold text-blue-700 dark:border-zinc-600 dark:text-blue-400"
+        >
+          {expanded ? "접기" : `더보기 (${hiddenCount}개 더)`}
+        </button>
+      )}
+
+      {year >= COMPUTED_FROM_YEAR && rows.length > 0 && (
+        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+          {COMPUTED_FROM_YEAR}년부터는 법정 규칙과 음력으로 <b>미리 계산한 예상 공휴일</b>이에요. 정부 발표(임시공휴일·선거일 등)와 다르면 아래에서 직접 추가·삭제해 주세요.
+        </p>
       )}
 
       {/* 날짜 추가 */}

@@ -370,7 +370,7 @@ interface LawDocument {
 
 ### 6.4 공휴일 (`lib/holidays/kr.ts`)
 
-- 2026~2027년 법정 공휴일(대체공휴일 포함)을 코드 상수로 넣는다. 날짜는 작업 21에서 **공식 자료로 확인**해 넣는다.
+- 2026~2048년 공휴일(2028년부터는 계산값)(대체공휴일 포함)을 코드 상수로 넣는다. 날짜는 작업 21에서 **공식 자료로 확인**해 넣는다.
 - 실제 공휴일 = 내장 목록 + `holidaysAdded` − `holidaysRemoved`.
 
 ---
@@ -515,7 +515,7 @@ components/
 lib/
   types.ts                # 6장 데이터 모양
   time.ts                 # 시각 ↔ 분, 10분 단위 검사, 날짜·요일 (한국 시간)
-  holidays/kr.ts          # 2026~2027년 법정 공휴일
+  holidays/kr.ts          # 2026~2048년 공휴일(2028년부터는 계산값)
   schedule/patterns.ts    # 패턴 1~6 정의
   schedule/generate.ts    # 등록 이력 → 날짜별 근무 (거꾸로 순환 포함)
   overtime/shift.ts       # 근무 1회 → 10분 칸, 야간·휴일 표시, 식사 공제
