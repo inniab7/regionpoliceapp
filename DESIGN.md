@@ -299,7 +299,7 @@ type OffKind = "비번" | "휴무";                                  // 쉬는 �
 type TimeRange = { start: string; end: string; mealDeduct?: boolean }; // "HH:MM", 10분 단위. mealDeduct는 평시 1시간 미만일 때만 사용(기본 true)
 
 interface Profile {
-  effectiveFrom: string;   // 적용일 "YYYY-MM-DD" (첫 등록은 등록일)
+  effectiveFrom: string;   // 적용일 "YYYY-MM-DD". 첫 등록은 "2000-01-01"(처음부터 적용, 달 중간에 등록해도 그 달 1일부터 계산), [변경]은 사용자가 고른 날
   agency: string;          // 소속청
   department: Department;
   team: string;

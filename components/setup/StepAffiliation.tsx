@@ -32,12 +32,14 @@ interface Props {
   value: AffiliationValue;
   onChange: (value: AffiliationValue) => void;
   onNext: () => void;
+  /** [변경]에서는 앞 단계(적용일)가 있어 [이전]을 보여 준다. 첫 등록의 첫 단계는 없음 */
+  onBack?: () => void;
 }
 
 const inputClass =
   "mt-2 block h-12 w-full rounded-lg border border-zinc-300 bg-background px-3 text-base outline-none focus:border-blue-700 focus:ring-2 focus:ring-blue-700/30 aria-invalid:border-red-600 dark:border-zinc-600 dark:focus:border-blue-400";
 
-export default function StepAffiliation({ value, onChange, onNext }: Props) {
+export default function StepAffiliation({ value, onChange, onNext, onBack }: Props) {
   // [다음]을 한 번 누른 뒤부터 안내 문구를 보여 준다 (처음부터 빨간 글씨가 뜨지 않게)
   const [submitted, setSubmitted] = useState(false);
   const errors = submitted ? validateAffiliation(value) : {};
@@ -139,12 +141,23 @@ export default function StepAffiliation({ value, onChange, onNext }: Props) {
         이름·연락처·계급·사번은 받지 않아요. 입력한 내용은 이 기기에만 저장돼요.
       </p>
 
-      <button
-        type="submit"
-        className="h-12 w-full rounded-lg bg-blue-700 text-base font-bold text-white dark:bg-blue-500"
-      >
-        다음
-      </button>
+      <div className="flex gap-2">
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            className="h-12 flex-1 rounded-lg border border-zinc-300 text-base dark:border-zinc-600"
+          >
+            이전
+          </button>
+        )}
+        <button
+          type="submit"
+          className="h-12 flex-[2] rounded-lg bg-blue-700 text-base font-bold text-white dark:bg-blue-500"
+        >
+          다음
+        </button>
+      </div>
     </form>
   );
 }
