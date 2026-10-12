@@ -1,16 +1,19 @@
-// Design Ref: §4.3 — 등록 2단계: 근무 형태(패턴 1~5 카드, 순환 순서가 보이게) + 패턴 시작일
-// Plan: 작업 16 — 등록 ② 근무 형태 (패턴 5는 시작일 생략, 규칙 13)
+// Design Ref: §4.3 — 등록 2단계: 근무 형태(패턴 1~6 카드, 순환 순서가 보이게) + 패턴 시작일
+// Plan: 작업 16 — 등록 ② 근무 형태 (패턴 5는 시작일 생략, 규칙 13). 패턴 6은 사용자가 순환을 직접 만든다.
 "use client";
 
 import { useState } from "react";
-import { PATTERNS } from "@/lib/schedule/patterns";
+import { PATTERNS, hasWorkDay } from "@/lib/schedule/patterns";
 import { addDays, formatShortDate, isValidDate } from "@/lib/time";
-import { PATTERN_IDS, type DayKind, type PatternId } from "@/lib/types";
+import { PATTERN_IDS, type CustomCycleKind, type DayKind, type PatternId } from "@/lib/types";
+import CustomCycleBuilder from "./CustomCycleBuilder";
 
 export interface PatternValue {
   pattern: PatternId | null;
   /** "YYYY-MM-DD", 패턴 5는 쓰지 않음 */
   patternStartDate: string;
+  /** 패턴 6(직접 만들기)의 순환. 다른 패턴에서는 쓰지 않음 */
+  customCycle: CustomCycleKind[];
 }
 
 type Errors = Partial<Record<keyof PatternValue, string>>;
@@ -19,8 +22,12 @@ type Errors = Partial<Record<keyof PatternValue, string>>;
 export function validatePattern(v: PatternValue): Errors {
   const errors: Errors = {};
   if (v.pattern === null) errors.pattern = "근무 형태를 골라 주세요.";
-  else if (v.pattern !== 5 && !isValidDate(v.patternStartDate))
-    errors.patternStartDate = "패턴 시작일(첫 번째 근무를 하는 날)을 골라 주세요.";
+  else {
+    if (v.pattern === 6 && !hasWorkDay(v.customCycle))
+      errors.customCycle = "주간·야간·일근 중 근무하는 날이 하루 이상 들어가게 순환을 만들어 주세요.";
+    if (v.pattern !== 5 && !isValidDate(v.patternStartDate))
+      errors.patternStartDate = "패턴 시작일(첫 번째 근무를 하는 날)을 골라 주세요.";
+  }
   return errors;
 }
 
@@ -41,7 +48,7 @@ interface Props {
 export default function StepPattern({ value, onChange, onNext, onBack }: Props) {
   const [submitted, setSubmitted] = useState(false);
   const errors = submitted ? validatePattern(value) : {};
-  const cycle = value.pattern ? PATTERNS[value.pattern].cycle : null;
+  const cycle = value.pattern === 6 ? (value.customCycle.length > 0 ? value.customCycle : null) : value.pattern ? PATTERNS[value.pattern].cycle : null;
   const showPreview = cycle !== null && isValidDate(value.patternStartDate);
 
   function handleSubmit(e: React.FormEvent) {
@@ -58,6 +65,7 @@ export default function StepPattern({ value, onChange, onNext, onBack }: Props) 
           {PATTERN_IDS.map((id) => {
             const def = PATTERNS[id];
             const selected = value.pattern === id;
+            const custom = id === 6;
             return (
               <label
                 key={id}
@@ -71,13 +79,23 @@ export default function StepPattern({ value, onChange, onNext, onBack }: Props) 
                   value={id}
                   checked={selected}
                   onChange={() => onChange({ ...value, pattern: id })}
-                  aria-label={def.cycle ? `${def.label}: ${def.cycle.join(", ")}` : `${def.label}: 평일 09:00~18:00 근무, 토·일·공휴일 휴무`}
+                  aria-label={
+                    custom
+                      ? "패턴 직접 만들기: 주간, 야간, 일근, 휴무, 비번을 골라 나만의 순환을 만들어요"
+                      : def.cycle
+                        ? `${def.label}: ${def.cycle.join(", ")}`
+                        : `${def.label}: 평일 09:00~18:00 근무, 토·일·공휴일 휴무`
+                  }
                   className="sr-only"
                 />
                 <span className={`text-base ${selected ? "font-bold text-blue-700 dark:text-blue-400" : "font-bold"}`}>
                   {def.label}
                 </span>
-                {def.cycle ? (
+                {custom ? (
+                  <span className="mt-1 block text-sm text-zinc-600 dark:text-zinc-400">
+                    주간·야간·일근·휴무·비번을 골라 나만의 순환을 만들어요 (형사·수사 등)
+                  </span>
+                ) : def.cycle ? (
                   <span className="mt-2 flex flex-wrap gap-1" aria-label={`순환: ${def.cycle.join(", ")}`}>
                     {def.cycle.map((kind, i) => (
                       <span key={i} className={`rounded px-1.5 py-0.5 text-sm ${kindClass(kind)}`} aria-hidden="true">
@@ -100,6 +118,10 @@ export default function StepPattern({ value, onChange, onNext, onBack }: Props) 
           </p>
         )}
       </fieldset>
+
+      {value.pattern === 6 && (
+        <CustomCycleBuilder value={value.customCycle} onChange={(customCycle) => onChange({ ...value, customCycle })} error={errors.customCycle} />
+      )}
 
       {value.pattern !== null && value.pattern !== 5 && (
         <div>

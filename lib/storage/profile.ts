@@ -3,7 +3,7 @@
 // 순수 함수: 저장소는 호출하는 쪽에서 넘긴다 (시험에서는 메모리 저장소).
 import { needsMealChoice } from "../overtime/meal";
 import { DEFAULT_SHIFT_TIMES, timedKindsInPattern } from "../schedule/patterns";
-import type { DateString, Department, IsoDateTime, PatternId, Profile, TimeRange, TimedShiftKind } from "../types";
+import type { CustomCycleKind, DateString, Department, IsoDateTime, PatternId, Profile, TimeRange, TimedShiftKind } from "../types";
 import type { KeyValueStore } from "./keyValueStore";
 import { addProfile, createEmptyData, loadData, saveData } from "./store";
 
@@ -22,13 +22,15 @@ export interface ProfileInput {
   pattern: PatternId;
   /** 패턴 5는 쓰지 않는다 */
   patternStartDate: string;
+  /** 직접 만든 패턴(6)의 순환. 다른 패턴에서는 무시한다 */
+  customCycle?: readonly CustomCycleKind[];
   shiftTimes: Partial<Record<TimedShiftKind, TimeRange>>;
 }
 
 /** 입력값을 저장할 Profile로 정리한다: 공백 정리, 패턴에 없는 근무 종류 버림, 패턴 5는 시작일 없음 */
 export function buildProfile(input: ProfileInput): Profile {
   const shiftTimes: Profile["shiftTimes"] = {};
-  for (const kind of timedKindsInPattern(input.pattern)) {
+  for (const kind of timedKindsInPattern(input.pattern, input.customCycle)) {
     const range = input.shiftTimes[kind] ?? DEFAULT_SHIFT_TIMES[kind];
     // 당직은 24시간 근무라 종료 = 시작 (규칙 11·12)
     const end = kind === "당직" ? range.start : range.end;
@@ -44,6 +46,7 @@ export function buildProfile(input: ProfileInput): Profile {
     team: input.team.trim(),
     pattern: input.pattern,
     ...(input.pattern !== 5 ? { patternStartDate: input.patternStartDate } : {}),
+    ...(input.pattern === 6 ? { customCycle: [...(input.customCycle ?? [])] } : {}),
     shiftTimes,
   };
 }

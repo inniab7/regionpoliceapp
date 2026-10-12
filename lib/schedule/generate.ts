@@ -3,7 +3,7 @@
 // 순수 함수: 저장소·현재 시각을 쓰지 않는다. 공휴일 목록은 호출하는 쪽에서 넘긴다.
 import { addDays, datesInMonth, diffDays, isWeekend, weekStart } from "../time";
 import type { DateString, DayKind, Profile, TimeRange } from "../types";
-import { DAY_SHIFT_FIXED_TIME, DUTY_DEFAULT_TIME, PATTERNS } from "./patterns";
+import { DAY_SHIFT_FIXED_TIME, DUTY_DEFAULT_TIME, profileCycle } from "./patterns";
 
 /** 하루의 정해진 근무 (근무 변경을 반영하기 전) */
 export interface PlannedDay {
@@ -35,13 +35,15 @@ function mod(n: number, m: number): number {
 
 /** 등록 정보 하나로 그날 근무 종류를 정한다 */
 export function dayKindFor(profile: Profile, date: DateString, holidays: ReadonlySet<DateString>): DayKind {
-  const { cycle } = PATTERNS[profile.pattern];
-  if (cycle === null) {
+  if (profile.pattern === 5) {
     // 패턴 5(일근): 평일 근무, 토·일·공휴일 휴무 (규칙 13)
     return isWeekend(date) || holidays.has(date) ? "휴무" : "일근";
   }
-  // 패턴 1~4: 시작일부터 순환. 시작일 이전은 거꾸로 이어서 센다 (규칙 16)
-  // patternStartDate는 저장할 때 검사하므로 패턴 1~4에는 반드시 있다
+  const cycle = profileCycle(profile);
+  // 직접 만든 순환이 비어 있으면(저장할 때 걸러지므로 생기지 않는다) 쉬는 날로 본다
+  if (cycle === null) return "휴무";
+  // 패턴 1~4·6: 시작일부터 순환. 시작일 이전은 거꾸로 이어서 센다 (규칙 16). 6은 요일·공휴일과 상관없이 만든 순서 그대로
+  // patternStartDate는 저장할 때 검사하므로 패턴 1~4·6에는 반드시 있다
   const offset = diffDays(profile.patternStartDate!, date);
   return cycle[mod(offset, cycle.length)];
 }
@@ -57,7 +59,8 @@ function timeFor(profile: Profile, kind: DayKind): TimeRange | null {
       // 당직은 24시간 근무. 등록한 시작 시각이 없으면 기본 09:00 (규칙 12)
       return profile.shiftTimes.당직 ?? DUTY_DEFAULT_TIME;
     case "일근":
-      return DAY_SHIFT_FIXED_TIME;
+      // 패턴 5는 09:00~18:00 고정, 직접 만든 패턴(6)은 등록한 시간(없으면 같은 기본값)
+      return profile.pattern === 6 ? (profile.shiftTimes.일근 ?? DAY_SHIFT_FIXED_TIME) : DAY_SHIFT_FIXED_TIME;
     default:
       // 비번·휴무
       return null;

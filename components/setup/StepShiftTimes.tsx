@@ -9,6 +9,7 @@ import { DEFAULT_SHIFT_TIMES, START_HOUR_CHOICES, timedKindsInPattern } from "@/
 import { formatDuration, parseTime, shiftDurationMinutes } from "@/lib/time";
 import {
   FREE_NIGHT_TIME_DEPARTMENTS,
+  type DayKind,
   type Department,
   type PatternId,
   type TimeRange,
@@ -22,9 +23,9 @@ export type ShiftTimesValue = Partial<Record<TimedShiftKind, TimeRange>>;
  * 고른 패턴에 맞게 입력값을 정리한다: 패턴에 있는 종류는 (없으면) 기본값으로 채우고,
  * 패턴에 없는 종류는 버린다. 이미 입력한 값은 그대로 둔다.
  */
-export function prepareShiftTimes(pattern: PatternId, current: ShiftTimesValue): ShiftTimesValue {
+export function prepareShiftTimes(pattern: PatternId, current: ShiftTimesValue, customCycle?: readonly DayKind[]): ShiftTimesValue {
   const next: ShiftTimesValue = {};
-  for (const kind of timedKindsInPattern(pattern)) next[kind] = current[kind] ?? { ...DEFAULT_SHIFT_TIMES[kind] };
+  for (const kind of timedKindsInPattern(pattern, customCycle)) next[kind] = current[kind] ?? { ...DEFAULT_SHIFT_TIMES[kind] };
   return next;
 }
 
@@ -36,6 +37,8 @@ export function withTopicParticle(word: string): string {
 }
 interface Props {
   pattern: PatternId;
+  /** 직접 만든 패턴(6)의 순환 */
+  customCycle?: readonly DayKind[];
   department: Department;
   value: ShiftTimesValue;
   onChange: (value: ShiftTimesValue) => void;
@@ -43,8 +46,8 @@ interface Props {
   onBack: () => void;
 }
 
-export default function StepShiftTimes({ pattern, department, value, onChange, onNext, onBack }: Props) {
-  const kinds = timedKindsInPattern(pattern);
+export default function StepShiftTimes({ pattern, customCycle, department, value, onChange, onNext, onBack }: Props) {
+  const kinds = timedKindsInPattern(pattern, customCycle);
   const freeNight = FREE_NIGHT_TIME_DEPARTMENTS.includes(department);
 
   function setRange(kind: TimedShiftKind, patch: Partial<TimeRange>) {
@@ -88,8 +91,10 @@ export default function StepShiftTimes({ pattern, department, value, onChange, o
       {kinds.map((kind) => {
         const range = value[kind] ?? DEFAULT_SHIFT_TIMES[kind];
         const duration = shiftDurationMinutes(range.start, range.end);
-        const free = kind === "야간" && freeNight;
-        const startHours = kind === "당직" || free ? ALL_HOURS : START_HOUR_CHOICES[kind];
+        // 형사 등 부서의 야간, 그리고 직접 만든 패턴(6)은 시작 시각을 선택지 제한 없이 고른다
+        const free = pattern === 6 || (kind === "야간" && freeNight);
+        const limited = !free && (kind === "주간" || kind === "야간" || kind === "심야");
+        const startHours = limited ? START_HOUR_CHOICES[kind] : ALL_HOURS;
         const askMeal = kind !== "당직" && needsMealChoice(range);
         const nextDay = (parseTime(range.end) ?? 0) <= (parseTime(range.start) ?? 0);
 
@@ -117,7 +122,9 @@ export default function StepShiftTimes({ pattern, department, value, onChange, o
             )}
             {free && (
               <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                {withTopicParticle(department)} 야간 시간을 10분 단위로 자유롭게 정할 수 있어요.
+                {pattern === 6
+                  ? `직접 만든 패턴의 ${kind} 시간을 10분 단위로 자유롭게 정할 수 있어요.`
+                  : `${withTopicParticle(department)} 야간 시간을 10분 단위로 자유롭게 정할 수 있어요.`}
               </p>
             )}
 

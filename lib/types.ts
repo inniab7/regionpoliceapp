@@ -42,15 +42,25 @@ export type DayKind = ShiftKind | OffKind;
 /**
  * 등록 때 시작 시간을 입력받는 근무 종류.
  * 당직(규칙 12)은 패턴 4에서만 나오는 24시간 근무라 **시작 시각만** 고르고(기본 09:00), 종료는 시작과 같다.
- * 일근(규칙 13)은 09:00~18:00 고정이라 시간 입력이 없다.
+ * 일근은 패턴 5에서는 09:00~18:00 고정이라 시간 입력이 없고(규칙 13), **직접 만든 패턴(6)** 에서만 시작·종료를 입력받는다.
  */
-export type TimedShiftKind = "주간" | "야간" | "심야" | "당직";
+export type TimedShiftKind = "주간" | "야간" | "심야" | "당직" | "일근";
 
 // ─── 근무 패턴 ──────────────────────────────────────────
 
-/** 근무 형태(패턴) 1~5 — 순환 내용은 lib/schedule/patterns.ts에서 정한다 (작업 7) */
-export const PATTERN_IDS = [1, 2, 3, 4, 5] as const;
+/**
+ * 근무 형태(패턴) 1~6 — 순환 내용은 lib/schedule/patterns.ts에서 정한다 (작업 7).
+ * 6은 사용자가 순환을 직접 만드는 패턴(형사·수사 등): 순환은 등록 정보의 customCycle에 들어 있다.
+ */
+export const PATTERN_IDS = [1, 2, 3, 4, 5, 6] as const;
 export type PatternId = (typeof PATTERN_IDS)[number];
+
+/** 직접 만드는 패턴(6)에서 하루로 고를 수 있는 종류 */
+export const CUSTOM_CYCLE_KINDS = ["주간", "야간", "일근", "휴무", "비번"] as const;
+export type CustomCycleKind = (typeof CUSTOM_CYCLE_KINDS)[number];
+
+/** 직접 만드는 패턴의 순환 길이 한도(일) */
+export const MAX_CUSTOM_CYCLE_DAYS = 31;
 
 // ─── 시간 범위 ──────────────────────────────────────────
 
@@ -82,6 +92,8 @@ export interface Profile {
   pattern: PatternId;
   /** 패턴 시작일 = 첫 번째 근무를 하는 날. 패턴 5(일근)는 없음 (규칙 13) */
   patternStartDate?: DateString;
+  /** 직접 만든 패턴(6)의 순환. 하루씩 이 순서로 반복한다 (패턴 시작일 = 순환의 첫째 날). 다른 패턴에는 없다 */
+  customCycle?: CustomCycleKind[];
   /** 근무 종류별 시작·종료. 고른 패턴에 들어 있는 종류만 채운다 */
   shiftTimes: Partial<Record<TimedShiftKind, TimeRange>>;
 }

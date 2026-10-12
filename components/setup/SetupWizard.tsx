@@ -35,9 +35,9 @@ function initialValues(current: Profile | null, today: string) {
     ? { agency: current.agency, department: current.department, team: current.team }
     : { agency: "", department: null, team: "" };
   const pattern: PatternValue = current
-    ? { pattern: current.pattern, patternStartDate: current.patternStartDate ?? "" }
-    : { pattern: null, patternStartDate: "" };
-  const times: ShiftTimesValue = current ? prepareShiftTimes(current.pattern, current.shiftTimes) : {};
+    ? { pattern: current.pattern, patternStartDate: current.patternStartDate ?? "", customCycle: current.customCycle ?? [] }
+    : { pattern: null, patternStartDate: "", customCycle: [] };
+  const times: ShiftTimesValue = current ? prepareShiftTimes(current.pattern, current.shiftTimes, current.customCycle) : {};
   return { affiliation, pattern, times, effectiveFrom: today };
 }
 
@@ -109,6 +109,7 @@ function WizardForm({
       team: affiliation.team,
       pattern: pattern.pattern,
       patternStartDate: pattern.patternStartDate,
+      customCycle: pattern.customCycle,
       shiftTimes: times,
     });
   }
@@ -222,7 +223,7 @@ function WizardForm({
                 onChange={setPattern}
                 onNext={() => {
                   // 고른 패턴에 맞춰 근무 시간 입력값을 정리한다 (없는 종류는 버리고, 새 종류는 기본값으로)
-                  if (pattern.pattern !== null) setTimes((t) => prepareShiftTimes(pattern.pattern!, t));
+                  if (pattern.pattern !== null) setTimes((t) => prepareShiftTimes(pattern.pattern!, t, pattern.customCycle));
                   setStep(step + 1);
                 }}
                 onBack={() => setStep(step - 1)}
@@ -232,6 +233,7 @@ function WizardForm({
             {name === "근무 시간" && pattern.pattern !== null && affiliation.department !== null && (
               <StepShiftTimes
                 pattern={pattern.pattern}
+                customCycle={pattern.customCycle}
                 department={affiliation.department}
                 value={times}
                 onChange={setTimes}

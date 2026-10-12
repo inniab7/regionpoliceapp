@@ -3,7 +3,7 @@
 import { addDays, isValidDate } from "../time";
 import type { DateString, DayKind, OtherTeam, Profile } from "../types";
 import { dayKindFor, plannedDay } from "./generate";
-import { PATTERNS } from "./patterns";
+import { profileCycle } from "./patterns";
 
 /** 등록할 수 있는 다른 팀 수 (PRD 흐름 ②) */
 export const MAX_OTHER_TEAMS = 6;
@@ -17,7 +17,7 @@ export interface TeamDay {
 
 /** 다른 팀이 의미 있는 패턴인지 (순환이 있는 패턴 1~4만. 일근(5)은 팀 교대가 없다) */
 export function supportsOtherTeams(profile: Profile | null): profile is Profile {
-  return profile !== null && PATTERNS[profile.pattern].cycle !== null;
+  return profile !== null && profileCycle(profile) !== null;
 }
 
 /** 그날 각 팀의 근무 종류. 내 패턴을 쓰되 시작일만 팀의 것으로 바꾼다 */

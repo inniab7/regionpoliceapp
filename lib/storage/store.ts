@@ -6,6 +6,8 @@ import { profileOnDate } from "../schedule/generate";
 import { isValidDate, isValidShiftTime } from "../time";
 import {
   DEPARTMENTS,
+  CUSTOM_CYCLE_KINDS,
+  MAX_CUSTOM_CYCLE_DAYS,
   PATTERN_IDS,
   SAVED_DATA_VERSION,
   type DayEntry,
@@ -114,6 +116,16 @@ function isTimeRange(v: unknown): v is TimeRange {
   );
 }
 
+function isCustomCycle(v: unknown): boolean {
+  return (
+    Array.isArray(v) &&
+    v.length >= 1 &&
+    v.length <= MAX_CUSTOM_CYCLE_DAYS &&
+    v.every((k) => (CUSTOM_CYCLE_KINDS as readonly unknown[]).includes(k)) &&
+    v.some((k) => k === "주간" || k === "야간" || k === "일근")
+  );
+}
+
 function isProfile(v: unknown): v is Profile {
   if (!isObject(v)) return false;
   if (!isDateString(v.effectiveFrom) || !isString(v.agency) || !isString(v.team)) return false;
@@ -122,10 +134,16 @@ function isProfile(v: unknown): v is Profile {
   if (v.patternStartDate !== undefined && !isDateString(v.patternStartDate)) return false;
   // 패턴 1~4는 시작일이 꼭 있어야 순환을 계산할 수 있다 (패턴 5는 없음)
   if (v.pattern !== 5 && v.patternStartDate === undefined) return false;
+  // 직접 만든 패턴(6)은 순환(1~31일, 근무하는 날이 하나 이상)이 꼭 있어야 하고, 다른 패턴에는 없어야 한다
+  if (v.pattern === 6) {
+    if (!isCustomCycle(v.customCycle)) return false;
+  } else if (v.customCycle !== undefined) {
+    return false;
+  }
   if (!isObject(v.shiftTimes)) return false;
   return Object.entries(v.shiftTimes).every(
     ([kind, range]) =>
-      ["주간", "야간", "심야", "당직"].includes(kind) &&
+      ["주간", "야간", "심야", "당직", "일근"].includes(kind) &&
       isTimeRange(range) &&
       // 당직은 24시간 근무라 종료가 시작과 같아야 한다 (규칙 11·12)
       (kind !== "당직" || range.end === range.start),

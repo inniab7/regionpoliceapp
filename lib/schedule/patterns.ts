@@ -1,6 +1,6 @@
 // Design Ref: §6.2 — 근무 패턴 정의 (코드 상수)
 // Plan: 작업 7 — 패턴 1~5의 순환 내용
-import type { DayKind, PatternId, TimeRange, TimedShiftKind } from "../types";
+import type { CustomCycleKind, DayKind, PatternId, Profile, TimeRange, TimedShiftKind } from "../types";
 
 export interface PatternDefinition {
   /** 화면 표시 이름 */
@@ -34,7 +34,23 @@ export const PATTERNS: Record<PatternId, PatternDefinition> = {
     label: "패턴 5 (일근)",
     cycle: null,
   },
+  // 6: 순환은 사용자가 만든다(등록 정보의 customCycle). profileCycle()로 읽는다
+  6: {
+    label: "패턴 6 (직접 만들기)",
+    cycle: null,
+  },
 };
+
+/** 등록 정보의 순환. 일근(5)처럼 순환이 없거나 직접 만든 순환이 비었으면 null */
+export function profileCycle(profile: Pick<Profile, "pattern" | "customCycle">): readonly DayKind[] | null {
+  if (profile.pattern === 6) return profile.customCycle && profile.customCycle.length > 0 ? profile.customCycle : null;
+  return PATTERNS[profile.pattern].cycle;
+}
+
+/** 직접 만든 순환에 근무하는 날(주간·야간·일근)이 하나라도 있는지 */
+export function hasWorkDay(cycle: readonly CustomCycleKind[]): boolean {
+  return cycle.some((k) => k === "주간" || k === "야간" || k === "일근");
+}
 
 /** 패턴 5(일근) 근무시간: 평일 09:00~18:00 고정 (규칙 13) */
 export const DAY_SHIFT_FIXED_TIME: TimeRange = { start: "09:00", end: "18:00" };
@@ -72,15 +88,17 @@ export const DEFAULT_SHIFT_TIMES: Record<TimedShiftKind, TimeRange> = {
   야간: { start: "18:00", end: "09:00" },
   심야: { start: "22:00", end: "06:00" },
   당직: DUTY_DEFAULT_TIME,
+  일근: DAY_SHIFT_FIXED_TIME, // 직접 만든 패턴(6)에서만 쓰며, 시작·종료를 바꿀 수 있다
 };
 
-const TIMED_KINDS: readonly TimedShiftKind[] = ["주간", "야간", "심야", "당직"];
+const TIMED_KINDS: readonly TimedShiftKind[] = ["주간", "야간", "심야", "당직", "일근"];
 
 /**
  * 그 패턴에서 시간을 입력받아야 하는 근무 종류 (등록 3단계용).
  * 일근은 09:00~18:00 고정이라 빠진다 (규칙 13). 당직은 시작 시각만 받는다 (규칙 12).
  */
-export function timedKindsInPattern(pattern: PatternId): TimedShiftKind[] {
-  const cycle = PATTERNS[pattern].cycle ?? [];
+export function timedKindsInPattern(pattern: PatternId, customCycle?: readonly DayKind[]): TimedShiftKind[] {
+  // 직접 만든 패턴(6)은 순환에 들어 있는 주간·야간·일근의 시간을 받는다
+  const cycle = pattern === 6 ? (customCycle ?? []) : (PATTERNS[pattern].cycle ?? []);
   return TIMED_KINDS.filter((kind) => cycle.includes(kind));
 }
