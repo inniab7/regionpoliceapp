@@ -124,7 +124,11 @@ function isProfile(v: unknown): v is Profile {
   if (v.pattern !== 5 && v.patternStartDate === undefined) return false;
   if (!isObject(v.shiftTimes)) return false;
   return Object.entries(v.shiftTimes).every(
-    ([kind, range]) => ["주간", "야간", "심야"].includes(kind) && isTimeRange(range),
+    ([kind, range]) =>
+      ["주간", "야간", "심야", "당직"].includes(kind) &&
+      isTimeRange(range) &&
+      // 당직은 24시간 근무라 종료가 시작과 같아야 한다 (규칙 11·12)
+      (kind !== "당직" || range.end === range.start),
   );
 }
 

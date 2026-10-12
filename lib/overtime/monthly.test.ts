@@ -109,11 +109,30 @@ describe("휴가·교육출장 (규칙 4)", () => {
 });
 
 describe("당직·휴일·등록 정보", () => {
-  it("패턴 4(당직·휴무·비번)만 한 달: 결과 0 (당직은 시간외 아님, 규칙 12)", () => {
+  it("패턴 4(당직·휴무·비번): 당직은 24시간 근무로 계산 (규칙 12)", () => {
+    // 당직 11번(10/1·4·7·…·31), 매번 09:00~다음 날 09:00, 식사 공제 후 23시간(야간 8시간)
+    // 손계산: 기본 초과 27(주별 3+13+3+3+5), 야간 88(8×11), 휴일 32(10/4·10·25·31 각 8) → 147
     const duty: Profile = { ...patrol, pattern: 4, shiftTimes: {} };
     const r = october([duty]);
-    expect(r.total).toEqual({ basic: 0, night: 0, holiday: 0, sum: 0 });
+    expect(r.total).toEqual({ basic: h(27), night: h(88), holiday: h(32), sum: h(147) });
     expect(r.issues).toEqual([]);
+    const oct1 = r.days.find((d) => d.date === "2026-10-01")!;
+    expect(oct1).toMatchObject({ plannedKind: "당직", workedMinutes: h(23), night: h(8) });
+    // 일요일(휴일) 당직: 처음 8시간은 휴일
+    expect(r.days.find((d) => d.date === "2026-10-04")!.holiday).toBe(h(8));
+  });
+
+  it("당직 시작 시각을 등록하면 그 시각부터 24시간 (08:30 시작도 23시간 근무)", () => {
+    const duty: Profile = { ...patrol, pattern: 4, shiftTimes: { 당직: { start: "08:30", end: "08:30" } } };
+    const r = october([duty]);
+    expect(r.days.find((d) => d.date === "2026-10-13")).toMatchObject({ workedMinutes: h(23), night: h(8) });
+    expect(r.issues).toEqual([]);
+  });
+
+  it("당직일에 휴가를 넣으면 근무 대신 주 누적 8시간", () => {
+    const duty: Profile = { ...patrol, pattern: 4, shiftTimes: {} };
+    const r = october([duty], { "2026-10-13": { replace: { type: "휴가" } } });
+    expect(r.days.find((d) => d.date === "2026-10-13")).toMatchObject({ replacedBy: "휴가", workedMinutes: 0 });
   });
 
   it("토요일 주간 근무는 휴일 8시간", () => {

@@ -130,6 +130,14 @@ describe("계산 검증 — 시험 사례 10건 (2026년 10월)", () => {
     expect(got).toEqual(want);
   });
 
+  // 추가 사례 11 (2026-10-12): 패턴 4 당직은 24시간 근무 (10건 성공 기준과는 별개)
+  it("추가 사례 11: 패턴 4 당직 24시간 근무 → 기본 초과 27 / 야간 88 / 휴일 32 / 합계 147", () => {
+    const duty: Profile = { ...patrol2, pattern: 4, shiftTimes: {} };
+    const r = calculateMonth({ year: 2026, month: 10, profiles: [duty], overrides: {}, holidays: HOLIDAYS });
+    expect(r.issues).toEqual([]);
+    expect(r.total).toEqual({ basic: 27 * 60, night: 88 * 60, holiday: 32 * 60, sum: 147 * 60 });
+  });
+
   it("성공 기준: 10건 중 9건 이상이 오차 0.5시간 이내", () => {
     const passed = CASES.filter((c) => check(c).pass).length;
     expect(CASES).toHaveLength(10);

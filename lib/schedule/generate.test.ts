@@ -77,8 +77,13 @@ describe("근무시간", () => {
     expect(days.map((d) => d.time)).toEqual([DAY, NIGHT, LATE]);
   });
 
-  it("당직은 시간이 없다 (시간외 계산 없음, 규칙 12)", () => {
-    expect(plannedDay([profile({ pattern: 4 })], "2026-10-01", NO_HOLIDAYS).time).toBeNull();
+  it("당직은 24시간 근무: 등록이 없으면 기본 09:00~다음 날 09:00 (규칙 12)", () => {
+    expect(plannedDay([profile({ pattern: 4 })], "2026-10-01", NO_HOLIDAYS).time).toEqual({ start: "09:00", end: "09:00" });
+  });
+
+  it("당직 시작 시각을 등록하면 그 시각부터 24시간", () => {
+    const p = profile({ pattern: 4, shiftTimes: { 당직: { start: "08:30", end: "08:30" } } });
+    expect(plannedDay([p], "2026-10-01", NO_HOLIDAYS).time).toEqual({ start: "08:30", end: "08:30" });
   });
 
   it("쉬는 날은 시간이 없다", () => {
@@ -155,10 +160,10 @@ describe("주 40시간 누적 시작일 (일~토, 달이 바뀌면 새로)", () 
 });
 
 describe("등록 3단계에서 시간을 묻는 근무 종류", () => {
-  it("패턴에 들어 있는 주간·야간·심야만, 당직·일근은 묻지 않는다", () => {
+  it("패턴에 들어 있는 근무 종류만 묻는다 (당직은 시작 시각만, 일근은 묻지 않음)", () => {
     expect(timedKindsInPattern(1)).toEqual(["주간", "야간", "심야"]);
     expect(timedKindsInPattern(2)).toEqual(["주간", "야간"]);
-    expect(timedKindsInPattern(4)).toEqual([]);
+    expect(timedKindsInPattern(4)).toEqual(["당직"]);
     expect(timedKindsInPattern(5)).toEqual([]);
   });
 });
