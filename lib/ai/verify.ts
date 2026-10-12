@@ -53,7 +53,7 @@ export async function verifyApiKey(
   provider: AiProvider,
   apiKey: string,
   fetchFn: typeof fetch = fetch,
-  online: boolean = typeof navigator === "undefined" ? true : navigator.onLine,
+  online: boolean = typeof navigator === "undefined" ? true : navigator.onLine !== false,
 ): Promise<VerifyResult> {
   const key = apiKey.trim();
   if (key === "") return { ok: false, reason: "empty" };
