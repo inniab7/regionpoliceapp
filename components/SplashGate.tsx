@@ -1,28 +1,12 @@
-// Design Ref: §4.1 (nice) — 시작 화면을 같은 탭에서는 한 번만 보이게 하는 작은 부품
-// Plan: 작업 38 — 이미 본 탭이면 시작 화면을 숨기고, 처음이면 "봤다"고 표시해 둔다. 화면에는 아무것도 그리지 않는다.
+// Design Ref: §4.1 (nice) — 시작 화면을 같은 탭에서는 한 번만 보이게 한다 (이미 본 탭이면 화면이 그려지기 전에 숨김)
+// Plan: 작업 38 — 홈 화면 추가. 서버가 만든 화면(HTML)에만 작은 스크립트를 넣어, 브라우저가 시작 화면을 그리기 전에 실행되게 한다.
+// 그래서 새로고침할 때 시작 화면이 번쩍이지 않는다. 브라우저(React)가 다시 그릴 때는 이 부품이 아무것도 그리지 않는다(스크립트는 한 번만 실행).
 "use client";
 
-import { useLayoutEffect } from "react";
-
-const KEY = "hyeondap:splash";
-
-/** 이 페이지를 열 때 이미 본 탭이었는지. 페이지를 열 때 한 번만 알아본다(개발 모드에서 효과가 두 번 실행돼도 같은 답) */
-let seenBefore: boolean | null = null;
-function wasSeenBefore(): boolean {
-  if (seenBefore === null) {
-    try {
-      seenBefore = sessionStorage.getItem(KEY) !== null;
-      sessionStorage.setItem(KEY, "1");
-    } catch {
-      seenBefore = false; // 저장소를 쓸 수 없으면 매번 보여 준다
-    }
-  }
-  return seenBefore;
-}
+/** 이미 본 탭이면 html에 no-splash를 붙여 시작 화면을 숨기고, 처음이면 "봤다"고 표시한다 */
+const CODE = `try{var k="hyeondap:splash";if(sessionStorage.getItem(k)){document.documentElement.classList.add("no-splash")}else{sessionStorage.setItem(k,"1")}}catch(e){}`;
 
 export default function SplashGate() {
-  useLayoutEffect(() => {
-    if (wasSeenBefore()) document.documentElement.classList.add("no-splash");
-  }, []);
-  return null;
+  if (typeof window !== "undefined") return null;
+  return <script suppressHydrationWarning dangerouslySetInnerHTML={{ __html: CODE }} />;
 }
