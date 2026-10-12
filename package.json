@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "eval": "vitest run --config vitest.eval.config.mts --passWithNoTests"
+    "eval": "vitest run --config vitest.eval.config.mts --passWithNoTests",
+    "laws": "node scripts/fetch-laws.mjs"
   },
   "dependencies": {
     "next": "16.3.8",

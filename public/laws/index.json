@@ -1,0 +1,53 @@
+{
+  "laws": [
+    {
+      "id": "criminal-act",
+      "name": "형법",
+      "baseDate": "2026-10-02",
+      "version": "2026-10-02-290185",
+      "file": "criminal-act.json"
+    },
+    {
+      "id": "minor-offenses",
+      "name": "경범죄 처벌법",
+      "baseDate": "2026-10-02",
+      "version": "2026-10-02-290135",
+      "file": "minor-offenses.json"
+    },
+    {
+      "id": "road-traffic",
+      "name": "도로교통법",
+      "baseDate": "2026-07-01",
+      "version": "2026-07-01-281875",
+      "file": "road-traffic.json"
+    },
+    {
+      "id": "road-traffic-decree",
+      "name": "도로교통법 시행령",
+      "baseDate": "2026-10-02",
+      "version": "2026-10-02-290387",
+      "file": "road-traffic-decree.json"
+    },
+    {
+      "id": "criminal-procedure",
+      "name": "형사소송법",
+      "baseDate": "2026-10-02",
+      "version": "2026-10-02-290189",
+      "file": "criminal-procedure.json"
+    },
+    {
+      "id": "police-duties",
+      "name": "경찰관 직무집행법",
+      "baseDate": "2026-07-07",
+      "version": "2026-07-07-282479",
+      "file": "police-duties.json"
+    },
+    {
+      "id": "personal-info",
+      "name": "개인정보 보호법",
+      "baseDate": "2026-09-11",
+      "version": "2026-09-11-283839",
+      "file": "personal-info.json"
+    }
+  ]
+}
