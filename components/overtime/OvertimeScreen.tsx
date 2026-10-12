@@ -112,7 +112,7 @@ export default function OvertimeScreen({ data }: { data: SavedData }) {
 
       {!BUILT_IN_YEARS.has(shown.year) && (
         <p className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">
-          {shown.year}년 공휴일은 아직 앱에 들어 있지 않아요. 평일 공휴일은 설정에서 직접 추가해 주세요.
+          {shown.year}년 공휴일은 아직 앱에 들어 있지 않아요. 평일 공휴일은 설정의 「공휴일」에서 직접 추가해 주세요.
         </p>
       )}
 

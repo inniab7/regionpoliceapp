@@ -4,6 +4,7 @@
 import { useMemo, useSyncExternalStore } from "react";
 import { getBrowserStore, type KeyValueStore } from "./keyValueStore";
 import { APP_DATA_KEY, parseSavedData } from "./store";
+import { updateData, type UpdateResult } from "./update";
 import type { SavedData } from "../types";
 
 /** 화면이 보는 저장 상태 */
@@ -50,6 +51,18 @@ function getSnapshot(): string {
   } catch {
     return UNAVAILABLE;
   }
+}
+
+/**
+ * 저장된 앱 데이터의 일부를 바꿔 이 기기에 저장하고, 화면에 알린다 (공휴일 편집, 근무 변경 등).
+ * 저장소를 쓸 수 없으면 "unavailable".
+ */
+export function changeAppData(updater: (data: SavedData) => SavedData): UpdateResult | "unavailable" {
+  const store = appStore();
+  if (!store) return "unavailable";
+  const result = updateData(store, updater);
+  if (result === "ok") notifyDataChanged();
+  return result;
 }
 
 /** 기기에 저장된 앱 데이터를 읽는다 */
