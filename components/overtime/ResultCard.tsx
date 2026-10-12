@@ -1,4 +1,4 @@
-// Design Ref: §4.2 — 결과 4줄(기본 초과·야간·휴일·합계)과 "참고용 계산" 안내 문구
+// Design Ref: §4.2 — 결과 3줄(기본 초과·야간·휴일, 휴일은 일수 병기)과 "참고용 계산" 안내 문구
 // Plan: 작업 23 — 결과 화면. 보고 있는 달의 1일~말일 결과이며, 근무를 바꾸면 바로 달라진다.
 import { RESULT_DISCLAIMER, resultRows } from "@/lib/overtime/result";
 import type { Breakdown } from "@/lib/overtime/allocate";
@@ -6,7 +6,7 @@ import type { Breakdown } from "@/lib/overtime/allocate";
 interface Props {
   /** 예: "2026년 10월" */
   title: string;
-  total: Breakdown & { sum: number };
+  total: Breakdown;
   /** 확인이 필요해 계산에서 빠진 입력이 있는지 */
   hasIssues: boolean;
 }
@@ -21,23 +21,18 @@ export default function ResultCard({ title, total, hasIssues }: Props) {
       </h2>
 
       <dl className="mt-2" aria-live="polite">
-        {rows.map((row) => {
-          const isSum = row.key === "sum";
-          return (
-            <div
-              key={row.key}
-              className={`flex items-baseline justify-between gap-3 py-2 ${
-                isSum ? "mt-1 border-t-2 border-zinc-400 pt-3 dark:border-zinc-500" : "border-b border-zinc-100 dark:border-zinc-800"
-              }`}
-            >
-              <dt>
-                <span className={isSum ? "text-lg font-bold" : "text-base font-bold"}>{row.label}</span>
-                <span className="block text-sm text-zinc-600 dark:text-zinc-400">{row.hint}</span>
-              </dt>
-              <dd className={`shrink-0 text-right tabular-nums ${isSum ? "text-2xl font-bold" : "text-xl font-bold"}`}>{row.text}</dd>
-            </div>
-          );
-        })}
+        {rows.map((row) => (
+          <div key={row.key} className="flex items-baseline justify-between gap-3 border-b border-zinc-100 py-2 last:border-b-0 dark:border-zinc-800">
+            <dt>
+              <span className="text-base font-bold">{row.label}</span>
+              <span className="block text-sm text-zinc-600 dark:text-zinc-400">{row.hint}</span>
+            </dt>
+            <dd className="shrink-0 text-right tabular-nums text-xl font-bold">
+              {row.text}
+              {row.note && <span className="ml-1.5 text-base font-bold text-red-600 dark:text-red-400">{row.note}</span>}
+            </dd>
+          </div>
+        ))}
       </dl>
 
       {hasIssues && (
