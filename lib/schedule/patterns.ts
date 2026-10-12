@@ -56,6 +56,24 @@ export const DAY_KIND_SHORT: Record<DayKind, string> = {
  */
 export const DUTY_DEFAULT_TIME: TimeRange = { start: "09:00", end: "09:00" };
 
+/**
+ * 등록 때 고르는 시작 시(時) 선택지 (PRD 흐름 ⓪).
+ * 형사·수사·사고조사·교통관리·교통안전의 야간은 이 제한 없이 10분 단위로 자유롭게 고른다 (규칙 10).
+ */
+export const START_HOUR_CHOICES: Record<"주간" | "야간" | "심야", readonly number[]> = {
+  주간: [6, 7, 8, 9],
+  야간: [17, 18, 19],
+  심야: [20, 21, 22],
+};
+
+/** 등록 화면이 처음에 채워 두는 근무시간 (사용자가 바꿀 수 있다) */
+export const DEFAULT_SHIFT_TIMES: Record<TimedShiftKind, TimeRange> = {
+  주간: { start: "09:00", end: "18:00" },
+  야간: { start: "18:00", end: "09:00" },
+  심야: { start: "22:00", end: "06:00" },
+  당직: DUTY_DEFAULT_TIME,
+};
+
 const TIMED_KINDS: readonly TimedShiftKind[] = ["주간", "야간", "심야", "당직"];
 
 /**

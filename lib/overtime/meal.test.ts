@@ -1,7 +1,7 @@
 // lib/overtime/meal.ts 시험 — 식사 1시간 공제 (규칙 2·3)
 import { describe, expect, it } from "vitest";
 import { formatTime } from "../time";
-import { applyMealDeduction } from "./meal";
+import { applyMealDeduction, needsMealChoice } from "./meal";
 import { isNightSlot } from "./night";
 import { buildShift } from "./shift";
 
@@ -72,6 +72,27 @@ describe("평시가 1시간 미만 → [식사시간 공제] 체크 (규칙 3)",
   it("근무 전체가 1시간이 안 되면 체크 시 근무 전체를 뺀다", () => {
     expect(meal("23:00", "23:30")).toEqual({ range: "23:00~23:30", workedMinutes: 0, deductedMinutes: 30 });
     expect(meal("23:00", "23:30", false).deductedMinutes).toBe(0);
+  });
+});
+
+describe("[식사시간 공제] 체크를 물어야 하는 근무 (규칙 3)", () => {
+  it("평시가 1시간 미만이면 묻는다: 22:00~06:00, 21:30~06:00(평시 30분)", () => {
+    expect(needsMealChoice({ start: "22:00", end: "06:00" })).toBe(true);
+    expect(needsMealChoice({ start: "21:30", end: "06:00" })).toBe(true);
+  });
+
+  it("평시가 1시간 이상이면 묻지 않는다: 주간, 야간 18:00~09:00, 당직 24시간", () => {
+    expect(needsMealChoice({ start: "09:00", end: "18:00" })).toBe(false);
+    expect(needsMealChoice({ start: "18:00", end: "09:00" })).toBe(false);
+    expect(needsMealChoice({ start: "09:00", end: "09:00" })).toBe(false);
+  });
+
+  it("딱 1시간이면 묻지 않는다: 21:00~23:00 (평시 21~22시)", () => {
+    expect(needsMealChoice({ start: "21:00", end: "23:00" })).toBe(false);
+  });
+
+  it("잘못된 시각은 묻지 않는다", () => {
+    expect(needsMealChoice({ start: "22:05", end: "06:00" })).toBe(false);
   });
 });
 

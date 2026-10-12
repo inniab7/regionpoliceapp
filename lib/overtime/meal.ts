@@ -1,7 +1,8 @@
 // Design Ref: §5.2 ⑤ — 식사 1시간 공제
 // Plan: 작업 9 — 근무 1회당 1번, 평시 가운데 1시간 (규칙 2·3)
 import { isNightSlot } from "./night";
-import type { Shift } from "./shift";
+import { buildShift, type Shift } from "./shift";
+import type { TimeRange } from "../types";
 
 /** 식사시간 1시간 = 10분 칸 6개 */
 export const MEAL_SLOTS = 6;
@@ -22,6 +23,16 @@ function middleSlots(slots: readonly number[], count: number): number[] {
   if (slots.length <= count) return [...slots];
   const startIndex = Math.floor((slots.length - count) / 2);
   return slots.slice(startIndex, startIndex + count);
+}
+
+/**
+ * 이 근무시간이 [식사시간 공제] 체크를 물어야 하는 근무인지 (규칙 3).
+ * 평시(22:00~06:00이 아닌 시간)가 1시간 미만인 근무만 해당한다. 시각이 잘못되면 false.
+ */
+export function needsMealChoice(range: TimeRange): boolean {
+  const r = buildShift("2000-01-03", { start: range.start, end: range.end });
+  if (!r.ok) return false;
+  return r.shift.slots.filter((s) => !isNightSlot(s)).length < MEAL_SLOTS;
 }
 
 /**
