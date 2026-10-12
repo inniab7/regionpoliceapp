@@ -1,16 +1,18 @@
 // Design Ref: §4.3 — 등록 화면: 3단계를 한 화면에 하나씩 (1 소속 → 2 근무 형태 → 3 근무 시간)
-// Plan: 작업 15 — 등록 마법사의 틀과 1단계. 2·3단계는 작업 16~18, 저장은 작업 19에서 만든다.
+// Plan: 작업 15·16 — 등록 마법사의 틀, 1단계(소속), 2단계(근무 형태). 3단계는 작업 17~18, 저장은 작업 19.
 // 입력 중인 내용은 이 화면 안에서만 들고 있다가, 마지막 [등록 완료] 때 기기에 저장한다.
 "use client";
 
 import { useState } from "react";
 import StepAffiliation, { type AffiliationValue } from "./StepAffiliation";
+import StepPattern, { type PatternValue } from "./StepPattern";
 
 const STEPS = ["소속", "근무 형태", "근무 시간"] as const;
 
 export default function SetupWizard() {
   const [step, setStep] = useState(0);
   const [affiliation, setAffiliation] = useState<AffiliationValue>({ agency: "", department: null, team: "" });
+  const [pattern, setPattern] = useState<PatternValue>({ pattern: null, patternStartDate: "" });
 
   return (
     <section>
@@ -43,7 +45,11 @@ export default function SetupWizard() {
           <StepAffiliation value={affiliation} onChange={setAffiliation} onNext={() => setStep(1)} />
         )}
 
-        {step > 0 && (
+        {step === 1 && (
+          <StepPattern value={pattern} onChange={setPattern} onNext={() => setStep(2)} onBack={() => setStep(0)} />
+        )}
+
+        {step > 1 && (
           <div>
             <p className="text-zinc-600 dark:text-zinc-400">
               {step + 1}단계({STEPS[step]})는 준비 중이에요.
