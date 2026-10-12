@@ -17,15 +17,12 @@ export default function TimePicker({
   value,
   onChange,
   hours = ALL_HOURS,
-  fixedMinute = false,
 }: {
   /** 예: "주간 시작" — 마지막 낱말("시작")이 왼쪽에 글자로 보이고, 전체가 화면 낭독용 이름이 된다 */
   label: string;
   value: string;
   onChange: (value: string) => void;
   hours?: readonly number[];
-  /** true면 분은 00으로 고정 (시작 시각을 정해진 시(時) 중에서 고를 때) */
-  fixedMinute?: boolean;
 }) {
   const total = parseTime(value) ?? 0;
   const h = Math.floor(total / 60);
@@ -36,7 +33,7 @@ export default function TimePicker({
       <select
         aria-label={`${label} 시`}
         value={h}
-        onChange={(e) => onChange(formatTime(Number(e.target.value) * 60 + (fixedMinute ? 0 : m)))}
+        onChange={(e) => onChange(formatTime(Number(e.target.value) * 60 + m))}
         className={selectClass}
       >
         {hours.map((hour) => (
@@ -45,22 +42,18 @@ export default function TimePicker({
           </option>
         ))}
       </select>
-      {fixedMinute ? (
-        <span className="w-full text-center text-base text-zinc-600 dark:text-zinc-400">00분</span>
-      ) : (
-        <select
-          aria-label={`${label} 분`}
-          value={m}
-          onChange={(e) => onChange(formatTime(h * 60 + Number(e.target.value)))}
-          className={selectClass}
-        >
-          {MINUTES.map((minute) => (
-            <option key={minute} value={minute}>
-              {pad(minute)}분
-            </option>
-          ))}
-        </select>
-      )}
+      <select
+        aria-label={`${label} 분`}
+        value={m}
+        onChange={(e) => onChange(formatTime(h * 60 + Number(e.target.value)))}
+        className={selectClass}
+      >
+        {MINUTES.map((minute) => (
+          <option key={minute} value={minute}>
+            {pad(minute)}분
+          </option>
+        ))}
+      </select>
     </div>
   );
 }

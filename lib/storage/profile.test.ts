@@ -58,6 +58,20 @@ describe("입력값 → 등록 정보 (buildProfile)", () => {
     const data = { version: 1, createdAt: NOW, profiles: [p], overrides: {}, holidaysAdded: [], holidaysRemoved: [], otherTeams: [], memos: [], lastBackupAt: null };
     expect(parseSavedData(JSON.parse(JSON.stringify(data)))).not.toBeNull();
   });
+
+  it("시작 시각에 분(10분 단위)이 있어도 저장·불러오기를 통과한다 (예: 주간 08:30, 야간 18:40)", () => {
+    const p = buildProfile({ ...base, shiftTimes: { 주간: { start: "08:30", end: "18:00" }, 야간: { start: "18:40", end: "09:00" } } });
+    expect(p.shiftTimes.주간?.start).toBe("08:30");
+    const data = { version: 1, createdAt: NOW, profiles: [p], overrides: {}, holidaysAdded: [], holidaysRemoved: [], otherTeams: [], memos: [], lastBackupAt: null };
+    const back = parseSavedData(JSON.parse(JSON.stringify(data)));
+    expect(back?.profiles[0].shiftTimes.야간?.start).toBe("18:40");
+  });
+
+  it("10분 단위가 아닌 시작 시각(08:35)은 저장 데이터 검사에서 거부한다", () => {
+    const p = buildProfile({ ...base, shiftTimes: { 주간: { start: "08:35", end: "18:00" }, 야간: { start: "18:00", end: "09:00" } } });
+    const data = { version: 1, createdAt: NOW, profiles: [p], overrides: {}, holidaysAdded: [], holidaysRemoved: [], otherTeams: [], memos: [], lastBackupAt: null };
+    expect(parseSavedData(JSON.parse(JSON.stringify(data)))).toBeNull();
+  });
 });
 
 describe("등록 저장 (registerProfile)", () => {

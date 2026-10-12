@@ -1,6 +1,6 @@
 // Design Ref: §4.3 — 등록 3단계: 고른 패턴에 들어 있는 근무 종류의 시간 입력
 // Plan: 작업 17·18 — 등록 ③ 근무 시간 (주간·야간·심야는 시작 선택지 + 종료 10분 단위,
-//   형사 등 부서의 야간은 시작·종료 모두 자유, 당직은 시작 시각만, 평시 1시간 미만이면 식사 공제 체크)
+//   시작은 시(時) 선택지 + 분 10분 단위, 형사 등 부서의 야간은 시·분 모두 자유, 당직은 시작 시각만, 평시 1시간 미만이면 식사 공제 체크)
 "use client";
 
 import TimePicker, { ALL_HOURS } from "@/components/TimePicker";
@@ -90,7 +90,6 @@ export default function StepShiftTimes({ pattern, department, value, onChange, o
         const duration = shiftDurationMinutes(range.start, range.end);
         const free = kind === "야간" && freeNight;
         const startHours = kind === "당직" || free ? ALL_HOURS : START_HOUR_CHOICES[kind];
-        const fixedStartMinute = kind !== "당직" && !free;
         const askMeal = kind !== "당직" && needsMealChoice(range);
         const nextDay = (parseTime(range.end) ?? 0) <= (parseTime(range.start) ?? 0);
 
@@ -102,7 +101,6 @@ export default function StepShiftTimes({ pattern, department, value, onChange, o
                 label={`${kind} 시작`}
                 value={range.start}
                 hours={startHours}
-                fixedMinute={fixedStartMinute}
                 onChange={(start) => setRange(kind, { start })}
               />
               {kind !== "당직" && (
