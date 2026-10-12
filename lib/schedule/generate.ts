@@ -106,3 +106,12 @@ export function accumulationWeekStart(date: DateString): DateString {
   const firstOfMonth = `${date.slice(0, 7)}-01`;
   return sunday < firstOfMonth ? firstOfMonth : sunday;
 }
+
+/** 주 누적이 끝나는 날: 그 주 토요일, 단 말일을 넘지 않는다 (규칙 8) */
+export function accumulationWeekEnd(date: DateString): DateString {
+  const saturday = addDays(weekStart(date), 6);
+  const [y, m] = date.split("-").map(Number);
+  const dates = datesInMonth(y, m);
+  const lastOfMonth = dates[dates.length - 1];
+  return saturday > lastOfMonth ? lastOfMonth : saturday;
+}

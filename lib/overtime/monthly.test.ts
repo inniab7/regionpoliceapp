@@ -58,9 +58,9 @@ describe("일근 초과근무 (추가 근무, 규칙 13·14)", () => {
     expect(r.days.find((d) => d.date === "2026-10-16")!.hasExtra).toBe(true);
   });
 
-  it("공휴일 낀 주(10/5·10/9)는 24시간 + 초과 2시간 = 26시간이라 기본 초과 0", () => {
+  it("공휴일 낀 주(10/5·10/9)는 기준 24시간 → 평일 24시간 + 초과근무 2시간 = 기본 초과 2시간 (규칙 4)", () => {
     const r = october([office], { "2026-10-08": { extra: { start: "18:00", end: "21:00" } } });
-    expect(r.total.basic).toBe(0);
+    expect(r.total.basic).toBe(h(2));
   });
 
   it("정해진 근무시간과 겹치는 추가 근무는 계산에서 빼고 안내", () => {

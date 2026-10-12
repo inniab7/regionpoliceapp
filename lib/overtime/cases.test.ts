@@ -50,27 +50,27 @@ interface Case {
 }
 
 const CASES: Case[] = [
-  { no: 1, title: "패턴 2, 변경 없음", profiles: [patrol2], expected: { basic: 0, night: 54, holiday: 48, sum: 102 } },
+  { no: 1, title: "패턴 2, 변경 없음", profiles: [patrol2], expected: { basic: 3, night: 54, holiday: 48, sum: 105 } },
   {
     no: 2,
     title: "패턴 2 + 10/14 야간일 연가",
     profiles: [patrol2],
     overrides: { "2026-10-14": { replace: { type: "휴가" } } },
-    expected: { basic: 0, night: 46, holiday: 48, sum: 94 },
+    expected: { basic: 3, night: 46, holiday: 48, sum: 97 },
   },
   {
     no: 3,
     title: "패턴 2 + 10/31(토) 비번 동원 09~18시",
     profiles: [patrol2],
     overrides: { "2026-10-31": { extra: { start: "09:00", end: "18:00" } } },
-    expected: { basic: 0, night: 54, holiday: 56, sum: 110 },
+    expected: { basic: 3, night: 54, holiday: 56, sum: 113 },
   },
   {
     no: 4,
     title: "패턴 2 + 10/27(화) 비번 동원 13~23시",
     profiles: [patrol2],
     overrides: { "2026-10-27": { extra: { start: "13:00", end: "23:00" } } },
-    expected: { basic: 3, night: 55, holiday: 48, sum: 106 },
+    expected: { basic: 6, night: 55, holiday: 48, sum: 109 },
   },
   {
     no: 5,
@@ -87,7 +87,7 @@ const CASES: Case[] = [
     title: "일근 + 10/10(토) 출근 09~19시",
     profiles: [office],
     overrides: { "2026-10-10": { extra: { start: "09:00", end: "19:00" } } },
-    expected: { basic: 0, night: 0, holiday: 8, sum: 8 },
+    expected: { basic: 1, night: 0, holiday: 8, sum: 9 },
   },
   { no: 7, title: "패턴 1 (심야 공제 체크 켬)", profiles: [patrol1(true)], expected: { basic: 0, night: 14, holiday: 26, sum: 40 } },
   { no: 8, title: "패턴 1 (심야 공제 체크 끔)", profiles: [patrol1(false)], expected: { basic: 0, night: 16, holiday: 27, sum: 43 } },
@@ -95,7 +95,7 @@ const CASES: Case[] = [
     no: 9,
     title: "10/15부터 [변경]: 패턴 2 → 일근",
     profiles: [patrol2, { ...office, effectiveFrom: "2026-10-15" }],
-    expected: { basic: 0, night: 27, holiday: 24, sum: 51 },
+    expected: { basic: 3, night: 27, holiday: 24, sum: 54 },
   },
   {
     no: 10,

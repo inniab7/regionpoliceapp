@@ -1,7 +1,7 @@
 // lib/overtime/allocate.ts 시험 — 주 40시간 누적과 휴일 > 야간 > 기본 초과 배분
 import { describe, expect, it } from "vitest";
 import { addDays } from "../time";
-import { allocate, type DayWork } from "./allocate";
+import { allocate, weeklyBaseMinutes, type DayWork } from "./allocate";
 import { buildShift, type Shift } from "./shift";
 
 function shift(date: string, start: string, end: string): Shift {
@@ -82,6 +82,35 @@ describe("휴일 (규칙 6 — 하루 8시간까지)", () => {
   });
 });
 
+describe("주 기준시간 = 평일(공휴일 제외) × 8시간 (규칙 4)", () => {
+  it("공휴일 없는 주 40시간, 수요일 공휴일이면 32시간", () => {
+    expect(weeklyBaseMinutes(d(3), new Set())).toBe(h(40));
+    expect(weeklyBaseMinutes(d(3), new Set([d(3)]))).toBe(h(32));
+  });
+
+  it("토·일과 겹친 공휴일은 빼지 않는다", () => {
+    expect(weeklyBaseMinutes(d(3), new Set([d(6)]))).toBe(h(40));
+  });
+
+  it("달을 걸친 짧은 주는 그 달 평일만: 2026-10-01(목)~03(토) 16시간, 2026-10-31(토)만 있는 주 0시간", () => {
+    expect(weeklyBaseMinutes("2026-10-02", new Set())).toBe(h(16));
+    expect(weeklyBaseMinutes("2026-08-31", new Set())).toBe(h(8)); // 8/30(일)~31(월)
+  });
+
+  it("수요일 공휴일인 주: 월·화·목·금 32시간 + 금요일 추가 근무 2시간(공제 후 1시간) → 기본 초과 1시간", () => {
+    const holidays = new Set([d(3)]);
+    const days = [1, 2, 4].map((n) => day(d(n), [["09:00", "18:00"]]));
+    days.push(day(d(5), [["09:00", "18:00"], ["19:00", "21:00"]]));
+    expect(allocate(days, holidays).total.basic).toBe(h(1));
+  });
+
+  it("같은 근무라도 공휴일이 없으면 33시간이라 기본 초과 0", () => {
+    const days = [1, 2, 4].map((n) => day(d(n), [["09:00", "18:00"]]));
+    days.push(day(d(5), [["09:00", "18:00"], ["19:00", "21:00"]]));
+    expect(allocate(days, new Set()).total.basic).toBe(0);
+  });
+});
+
 describe("주와 달의 경계 (규칙 8)", () => {
   it("일요일이 되면 주 누적을 새로 센다", () => {
     const sat = "2026-10-10";
@@ -90,14 +119,15 @@ describe("주와 달의 경계 (규칙 8)", () => {
     expect(r.days[1].weekAccumulated).toBe(h(23)); // 토요일 23시간은 이어지지 않음
   });
 
-  it("달을 걸친 주는 1일부터 새로: 10/1(목)·10/2(금) 24시간 근무 → 46시간", () => {
+  it("달을 걸친 주는 1일부터 새로: 10/1(목)·10/2(금) 24시간 근무, 기준 16시간(평일 2일)", () => {
     // 24시간 근무 = 공제 후 23시간(평시 09~16:30·17:30~22시 12시간, 야간 8시간, 평시 06~09시 3시간)
-    // 둘째 날: 23 + 12 = 35시간 → 야간 중 03시에 40시간을 넘김 → 넘은 야간 3시간은 야간에만,
-    // 이어지는 평시 06~09시 3시간이 기본 초과
+    // 첫날: 평시 12시간 → 누적 12, 야간 중 02시에 16시간을 넘김, 06~09시 평시 3시간 = 기본 초과
+    // 둘째 날: 이미 16시간을 넘었으므로 평시 15시간 모두 기본 초과, 야간 8시간은 야간
     const r = allocate([day("2026-10-01", [["09:00", "09:00"]]), day("2026-10-02", [["09:00", "09:00"]])]);
+    expect(r.days[0].weekBase).toBe(h(16));
     expect(r.days[1].weekAccumulated).toBe(h(46));
     expect(r.total.night).toBe(h(16));
-    expect(r.total.basic).toBe(h(3));
+    expect(r.total.basic).toBe(h(18));
   });
 
   it("날짜 순서가 섞여 들어와도 날짜 순으로 계산한다", () => {

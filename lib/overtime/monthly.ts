@@ -161,7 +161,7 @@ export function calculateMonth(input: MonthInput): MonthResult {
     issue(from, "NO_PROFILE", "이 달에 적용되는 등록 정보가 없어요. 먼저 근무를 등록해 주세요.");
   }
 
-  const allocation = allocate(works);
+  const allocation = allocate(works, input.holidays);
   const days: MonthDay[] = meta.map((m, i) => {
     const a = allocation.days[i];
     return { ...m, basic: a.basic, night: a.night, holiday: a.holiday, workedMinutes: a.workedMinutes };
