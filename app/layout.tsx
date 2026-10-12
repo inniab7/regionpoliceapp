@@ -3,6 +3,7 @@
 import type { Metadata, Viewport } from "next";
 import { Noto_Sans_KR } from "next/font/google";
 import BottomNav from "@/components/BottomNav";
+import SplashScreen from "@/components/SplashScreen";
 import "./globals.css";
 
 // 한글 글꼴(Noto Sans KR). 한글 글자는 필요한 만큼만 나눠 받아 처음 로딩을 가볍게 한다.
@@ -19,6 +20,8 @@ export const metadata: Metadata = {
   title: { default: "현답", template: "%s | 현답" },
   description: "답이 있는 현장 근무자를 위하여 — 초과근무 계산과 규정 찾기",
   applicationName: "현답",
+  // iOS 홈 화면에서 앱처럼(주소창 없이) 열리게 하고 아이콘 이름을 정한다
+  appleWebApp: { capable: true, title: "현답", statusBarStyle: "default" },
 };
 
 // 스마트폰 화면 폭에 맞추고, 상단 바 색을 화면 배경색과 맞춘다.
@@ -36,8 +39,9 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="ko" className={`${notoSansKr.variable} h-full antialiased`}>
+    <html lang="ko" className={`${notoSansKr.variable} h-full antialiased`} suppressHydrationWarning>
       <body className="min-h-full flex flex-col">
+        <SplashScreen />
         {/* 화면 내용: 스마트폰 폭 기준. 노치·홈 막대와 하단 메뉴에 가리지 않게 여백을 둔다 */}
         <main className="mx-auto w-full max-w-md flex-1 pt-[calc(1.5rem+env(safe-area-inset-top))] pb-[calc(5rem+env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))]">
           {children}
