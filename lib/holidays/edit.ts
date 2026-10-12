@@ -37,6 +37,11 @@ export function holidayRowsForYear(data: HolidayData, year: number): HolidayRow[
     });
 }
 
+/** 그 해의 공휴일 일수 (뺀 날은 제외, 직접 추가한 날은 포함). 토·일과 겹쳐도 이름 있는 공휴일이면 센다 */
+export function countHolidaysForYear(data: HolidayData, year: number): number {
+  return holidayRowsForYear(data, year).filter((row) => !row.removed).length;
+}
+
 /** 지금 공휴일인지 (내장 + 추가 − 뺀 날) */
 export function isHoliday(data: HolidayData, date: DateString): boolean {
   return effectiveHolidays(data.holidaysAdded, data.holidaysRemoved).has(date);

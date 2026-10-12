@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { createEmptyData } from "../storage/store";
 import { effectiveHolidays } from "./kr";
-import { addHoliday, holidayRowsForYear, isHoliday, removeHoliday, restoreHoliday } from "./edit";
+import { addHoliday, countHolidaysForYear, holidayRowsForYear, isHoliday, removeHoliday, restoreHoliday } from "./edit";
 
 const NOW = "2026-10-12T00:00:00.000Z";
 const empty = () => createEmptyData(NOW);
@@ -27,9 +27,9 @@ describe("공휴일 목록 (해마다)", () => {
   });
 
   it("내장 목록이 없는 해는 직접 추가한 날만 보인다", () => {
-    expect(holidayRowsForYear(empty(), 2028)).toEqual([]);
-    const { data } = addHoliday(empty(), "2028-03-15");
-    expect(holidayRowsForYear(data, 2028).map((r) => r.date)).toEqual(["2028-03-15"]);
+    expect(holidayRowsForYear(empty(), 2049)).toEqual([]);
+    const { data } = addHoliday(empty(), "2049-03-15");
+    expect(holidayRowsForYear(data, 2049).map((r) => r.date)).toEqual(["2049-03-15"]);
   });
 });
 
@@ -103,5 +103,28 @@ describe("삭제와 되돌리기", () => {
   it("같은 공휴일을 두 번 삭제해도 한 번만 기록된다", () => {
     const twice = removeHoliday(removeHoliday(empty(), "2026-10-09"), "2026-10-09");
     expect(twice.holidaysRemoved).toEqual(["2026-10-09"]);
+  });
+});
+
+describe("그 해 공휴일 일수 (countHolidaysForYear)", () => {
+  it("2026년은 22일, 2027년은 24일", () => {
+    expect(countHolidaysForYear(empty(), 2026)).toBe(22);
+    expect(countHolidaysForYear(empty(), 2027)).toBe(24);
+  });
+  it("직접 추가하면 늘고, 뺀 날은 줄고, 되돌리면 다시 는다", () => {
+    const added = addHoliday(empty(), "2026-10-20").data;
+    expect(countHolidaysForYear(added, 2026)).toBe(23);
+    const removed = removeHoliday(added, "2026-10-09");
+    expect(countHolidaysForYear(removed, 2026)).toBe(22);
+    expect(countHolidaysForYear(restoreHoliday(removed, "2026-10-09"), 2026)).toBe(23);
+  });
+  it("다른 해에는 영향이 없고, 내장 데이터가 없는 해는 0일", () => {
+    const added = addHoliday(empty(), "2026-10-20").data;
+    expect(countHolidaysForYear(added, 2027)).toBe(24);
+    expect(countHolidaysForYear(empty(), 2049)).toBe(0);
+  });
+  it("2028~2048년도 센다 (예: 2028년 18일)", () => {
+    expect(countHolidaysForYear(empty(), 2028)).toBe(18);
+    expect(countHolidaysForYear(empty(), 2048)).toBe(20);
   });
 });
