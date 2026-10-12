@@ -14,9 +14,9 @@ function asArray(v: unknown): unknown[] {
 }
 
 /** 문자열이나 (여러 겹의) 문자열 배열을 한 줄씩 펴서 모은다 */
-function flattenStrings(v: unknown): string[] {
-  if (typeof v === "string") return v.trim() === "" ? [] : [v.trim()];
-  if (Array.isArray(v)) return v.flatMap(flattenStrings);
+function flattenStrings(v: unknown, trim = true): string[] {
+  if (typeof v === "string") return v.trim() === "" ? [] : [trim ? v.trim() : v];
+  if (Array.isArray(v)) return v.flatMap((x) => flattenStrings(x, trim));
   return [];
 }
 
@@ -58,7 +58,45 @@ function convertArticle(unit: unknown): LawArticle | null {
   return { no, title: typeof unit["조문제목"] === "string" ? unit["조문제목"].trim() : "", text };
 }
 
-/** API 응답(JSON)을 법령 파일로 바꾼다. 법령 이름이 기대와 다르거나 조문이 없으면 null */
+/** 표 테두리(┏━┯┓ 등)만 있는 줄인지 */
+const BORDER_ONLY = /^[\s┏┓┗┛┠┨┯┷┼┬┴┣┫╋━─┃│]*$/;
+
+/**
+ * 별표 표 한 줄을 읽기 쉽게 바꾼다. 줄 단위로 칸 맞춤을 그대로 두어
+ * "범칙행위 | 근거 | 금액"처럼 같은 줄의 칸이 같은 항목에 속하게 한다.
+ * 테두리만 있는 줄과 내용 없는 줄은 뺀다.
+ */
+export function cleanAnnexLine(line: string): string | null {
+  if (BORDER_ONLY.test(line)) return null;
+  if (!/[┃│]/.test(line)) return line.trim() === "" ? null : line.trim();
+  const cells = line
+    .split(/[┃│]/)
+    .map((c) => c.replace(/\s+/g, " ").trim());
+  // 줄 맨 앞·맨 뒤 테두리(┃) 때문에 생긴 칸 하나씩만 버리고, 비어 있는 안쪽 칸은 자리를 지킨다
+  // (그래야 "| | 2) 승용…"처럼 몇 번째 칸의 내용인지 알 수 있다)
+  if (/^\s*[┃│]/.test(line)) cells.shift();
+  if (/[┃│]\s*$/.test(line)) cells.pop();
+  if (cells.every((c) => c === "")) return null;
+  return cells.join(" | ");
+}
+
+/** 별표 한 건 → LawArticle (예: no "별표 8"). 삭제된 별표나 내용 없는 별표는 null */
+function convertAnnex(unit: unknown): LawArticle | null {
+  if (!isRecord(unit) || unit["별표구분"] !== "별표") return null;
+  const title = typeof unit["별표제목"] === "string" ? unit["별표제목"].trim() : "";
+  if (title === "" || title.startsWith("삭제")) return null;
+  const num = parseInt(String(unit["별표번호"] ?? ""), 10);
+  if (!Number.isFinite(num)) return null;
+  const branch = parseInt(String(unit["별표가지번호"] ?? "0"), 10);
+  const no = `별표 ${num}${branch > 0 ? `의${branch}` : ""}`;
+  const lines = flattenStrings(unit["별표내용"], false)
+    .map(cleanAnnexLine)
+    .filter((l): l is string => l !== null);
+  if (lines.length === 0) return null;
+  return { no, title, text: lines.join("\n") };
+}
+
+/** API 응답(JSON)을 법령 파일로 바꾼다(조문 + 별표). 법령 이름이 기대와 다르거나 조문이 없으면 null */
 export function convertLaw(raw: unknown, expectedName: string): LawDocument | null {
   if (!isRecord(raw) || !isRecord(raw["법령"])) return null;
   const law = raw["법령"];
@@ -70,6 +108,9 @@ export function convertLaw(raw: unknown, expectedName: string): LawDocument | nu
   const units = isRecord(jo) ? asArray(jo["조문단위"]) : [];
   const articles = units.map(convertArticle).filter((a): a is LawArticle => a !== null);
   if (articles.length === 0) return null;
+  // 별표(표)도 조문 목록 뒤에 붙인다 (예: 범칙금액표)
+  const annexes = isRecord(law["별표"]) ? asArray(law["별표"]["별표단위"]) : [];
+  articles.push(...annexes.map(convertAnnex).filter((a): a is LawArticle => a !== null));
   return { name: expectedName, baseDate, source: "국가법령정보센터", articles };
 }
 

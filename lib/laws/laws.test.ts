@@ -1,7 +1,7 @@
 // lib/laws/ 시험 — 원문 변환, 검사, 그리고 public/laws/ 에 실제로 들어 있는 7종 파일 점검
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { convertLaw, findLawSerial, toIsoDate } from "./convert";
+import { cleanAnnexLine, convertLaw, findLawSerial, toIsoDate } from "./convert";
 import { DEFAULT_LAWS, parseLawDocument, parseLawIndex } from "./types";
 
 const readJson = (file: string): unknown => JSON.parse(readFileSync(`public/laws/${file}`, "utf8"));
@@ -72,6 +72,42 @@ describe("원문 변환 (convertLaw)", () => {
   });
 });
 
+describe("별표(표) 변환", () => {
+  it("테두리 줄은 버리고, 칸은 | 로 나누며, 빈 칸 자리는 지킨다", () => {
+    expect(cleanAnnexLine("┏━━━━┯━━━━┓")).toBeNull();
+    expect(cleanAnnexLine("┠────┼────┨")).toBeNull();
+    expect(cleanAnnexLine("┃                    │          ┃")).toBeNull();
+    expect(cleanAnnexLine("┃1. 속도위반(60㎞/h 초과)   │제17조제3항   │1) 승합자동차등: 13만원 ┃")).toBe(
+      "1. 속도위반(60㎞/h 초과) | 제17조제3항 | 1) 승합자동차등: 13만원",
+    );
+    expect(cleanAnnexLine("┃          │            │2) 승용자동차등: 12만원 ┃")).toBe(" |  | 2) 승용자동차등: 12만원");
+  });
+  it("표가 아닌 줄은 앞뒤 공백만 정리한다", () => {
+    expect(cleanAnnexLine("   ■ 시험법 [별표 1]   ")).toBe("■ 시험법 [별표 1]");
+    expect(cleanAnnexLine("      ")).toBeNull();
+  });
+
+  const withAnnex = {
+    법령: {
+      기본정보: { 법령명_한글: "시험법", 시행일자: "20261002" },
+      조문: { 조문단위: [{ 조문번호: "1", 조문여부: "조문", 조문제목: "목적", 조문내용: "제1조(목적) 시험" }] },
+      별표: {
+        별표단위: [
+          { 별표구분: "별표", 별표번호: "0008", 별표가지번호: "00", 별표제목: "범칙금액표", 별표내용: [["┃항목 │금액┃", "┠──┼──┨", "┃가 │1만원┃"]] },
+          { 별표구분: "별표", 별표번호: "0005", 별표가지번호: "02", 별표제목: "가지 별표", 별표내용: [["내용"]] },
+          { 별표구분: "별표", 별표번호: "0006", 별표가지번호: "02", 별표제목: "삭제 <2013.6.28>", 별표내용: "삭제" },
+          { 별표구분: "서식", 별표번호: "0001", 별표가지번호: "00", 별표제목: "서식", 별표내용: [["서식"]] },
+        ],
+      },
+    },
+  };
+  it("별표는 조문 뒤에 붙고, 삭제·서식은 뺀다", () => {
+    const doc = convertLaw(withAnnex, "시험법");
+    expect(doc?.articles.map((a) => a.no)).toEqual(["제1조", "별표 8", "별표 5의2"]);
+    expect(doc?.articles[1]).toEqual({ no: "별표 8", title: "범칙금액표", text: "항목 | 금액\n가 | 1만원" });
+  });
+});
+
 describe("검색 결과에서 법령 찾기 (findLawSerial)", () => {
   const search = {
     LawSearch: {
@@ -136,5 +172,14 @@ describe("public/laws/ 실제 파일 (기본 7종)", () => {
     expect(find("road-traffic", "제44조")?.title).toBe("술에 취한 상태에서의 운전 금지");
     expect(find("police-duties", "제3조")?.title).toBe("불심검문");
     expect(find("criminal-act", "제329조")?.title).toBe("절도");
+  });
+
+  it("도로교통법 시행령에 범칙금액 별표(별표 8~10)가 들어 있다", () => {
+    const doc = parseLawDocument(readJson("road-traffic-decree.json"));
+    const annex8 = doc?.articles.find((a) => a.no === "별표 8");
+    expect(annex8?.title).toContain("범칙행위 및 범칙금액(운전자)");
+    expect(annex8?.text).toContain("술에 취한 상태에서의");
+    expect(doc?.articles.find((a) => a.no === "별표 9")?.title).toContain("보행자");
+    expect(doc?.articles.find((a) => a.no === "별표 10")?.title).toContain("어린이보호구역");
   });
 });
