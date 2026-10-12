@@ -1,5 +1,5 @@
 // Design Ref: §4.2 — 근무표 달력: 날짜마다 근무 한 글자, 토·일·공휴일은 빨간 날짜, ● 변경, + 추가 근무, 다른 달 칸은 비움
-// Plan: 작업 20 — 근무표 달력. 날짜를 눌러 근무를 바꾸는 창은 작업 22에서 붙인다.
+// Plan: 작업 20·22 — 근무표 달력. 날짜 칸을 누르면 onSelect로 알려, 근무를 바꾸는 창(DayEditSheet)을 연다.
 import { monthGrid } from "@/lib/overtime/calendar";
 import type { MonthDay } from "@/lib/overtime/monthly";
 import { DAY_KIND_SHORT } from "@/lib/schedule/patterns";
@@ -35,9 +35,11 @@ interface Props {
   days: ReadonlyMap<DateString, MonthDay>;
   /** 오늘 날짜 (이 달이 아니면 표시되지 않음) */
   today: DateString;
+  /** 날짜 칸을 눌렀을 때 */
+  onSelect?: (date: DateString) => void;
 }
 
-export default function MonthCalendar({ year, month, days, today }: Props) {
+export default function MonthCalendar({ year, month, days, today, onSelect }: Props) {
   const rows = monthGrid(year, month);
 
   return (
@@ -83,11 +85,17 @@ export default function MonthCalendar({ year, month, days, today }: Props) {
               return (
                 <td
                   key={c}
-                  aria-label={spoken}
-                  className={`relative h-14 rounded-md align-top ${
+                  className={`relative h-14 rounded-md p-0 align-top ${
                     isToday ? "ring-2 ring-blue-700 dark:ring-blue-400" : "border border-zinc-200 dark:border-zinc-800"
                   }`}
                 >
+                  {/* 날짜 칸 전체가 버튼: 누르면 그날 근무를 바꾸는 창이 열린다 */}
+                  <button
+                    type="button"
+                    onClick={() => onSelect?.(date)}
+                    aria-label={`${spoken}. 눌러서 근무 바꾸기`}
+                    className="block h-full w-full rounded-md focus-visible:outline-2 focus-visible:outline-blue-700 active:bg-zinc-100 dark:active:bg-zinc-800"
+                  >
                   <span
                     className={`block pt-0.5 text-sm leading-tight ${
                       d?.restDay ? "font-bold text-red-600 dark:text-red-400" : ""
@@ -120,6 +128,7 @@ export default function MonthCalendar({ year, month, days, today }: Props) {
                       {d.hasExtra && <span className="text-blue-700 dark:text-blue-400">+</span>}
                     </span>
                   )}
+                  </button>
                 </td>
               );
             })}

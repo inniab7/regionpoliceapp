@@ -1,5 +1,5 @@
 // Design Ref: §4.2 — 초과근무 화면: 달 이동, 오늘 근무 카드, 근무표 달력
-// Plan: 작업 20 — 근무표 달력. 결과 4줄(작업 23)과 근무 변경(작업 22)은 이후에 이 화면에 붙인다.
+// Plan: 작업 20·22 — 근무표 달력과 근무 변경 창. 결과 4줄(작업 23)은 이후에 이 화면에 붙인다.
 "use client";
 
 import { useMemo, useState } from "react";
@@ -8,7 +8,8 @@ import { isSameMonth, monthLabel, shiftMonth, yearMonthOf, type YearMonth } from
 import { calculateMonth } from "@/lib/overtime/monthly";
 import { plannedDay } from "@/lib/schedule/generate";
 import { formatShortDate, todayInKst } from "@/lib/time";
-import type { SavedData } from "@/lib/types";
+import type { DateString, SavedData } from "@/lib/types";
+import DayEditSheet from "./DayEditSheet";
 import MonthCalendar, { CalendarLegend } from "./MonthCalendar";
 import TodayCard from "./TodayCard";
 
@@ -19,6 +20,8 @@ export default function OvertimeScreen({ data }: { data: SavedData }) {
   // 오늘 날짜는 화면을 처음 그릴 때 한 번 정한다 (한국 시간 기준)
   const [today] = useState(() => todayInKst(new Date()));
   const [shown, setShown] = useState<YearMonth>(() => yearMonthOf(today));
+  // 눌러서 근무를 바꾸고 있는 날짜 (없으면 창이 닫혀 있다)
+  const [selectedDate, setSelectedDate] = useState<DateString | null>(null);
   const currentMonth = yearMonthOf(today);
 
   const holidays = useMemo(
@@ -100,7 +103,7 @@ export default function OvertimeScreen({ data }: { data: SavedData }) {
       </div>
 
       <div className="mt-2">
-        <MonthCalendar year={shown.year} month={shown.month} days={dayMap} today={today} />
+        <MonthCalendar year={shown.year} month={shown.month} days={dayMap} today={today} onSelect={setSelectedDate} />
         <CalendarLegend />
       </div>
 
@@ -130,6 +133,8 @@ export default function OvertimeScreen({ data }: { data: SavedData }) {
           {issueGroups.length > 5 && <p className="mt-1">외 {issueGroups.length - 5}건</p>}
         </div>
       )}
+
+      {selectedDate && <DayEditSheet key={selectedDate} date={selectedDate} input={input} onClose={() => setSelectedDate(null)} />}
     </section>
   );
 }

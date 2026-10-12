@@ -3,9 +3,10 @@
 //   형사 등 부서의 야간은 시작·종료 모두 자유, 당직은 시작 시각만, 평시 1시간 미만이면 식사 공제 체크)
 "use client";
 
+import TimePicker, { ALL_HOURS } from "@/components/TimePicker";
 import { needsMealChoice } from "@/lib/overtime/meal";
 import { DEFAULT_SHIFT_TIMES, START_HOUR_CHOICES, timedKindsInPattern } from "@/lib/schedule/patterns";
-import { formatDuration, formatTime, parseTime, shiftDurationMinutes } from "@/lib/time";
+import { formatDuration, parseTime, shiftDurationMinutes } from "@/lib/time";
 import {
   FREE_NIGHT_TIME_DEPARTMENTS,
   type Department,
@@ -27,73 +28,12 @@ export function prepareShiftTimes(pattern: PatternId, current: ShiftTimesValue):
   return next;
 }
 
-const pad = (n: number) => String(n).padStart(2, "0");
-
 /** 낱말 뒤에 받침에 맞는 "은/는"을 붙인다 (예: 형사는, 교통안전은) */
 export function withTopicParticle(word: string): string {
   const code = word.charCodeAt(word.length - 1) - 0xac00;
   const hasFinalConsonant = code >= 0 && code < 11172 && code % 28 !== 0;
   return `${word}${hasFinalConsonant ? "은" : "는"}`;
 }
-const HOURS = Array.from({ length: 24 }, (_, i) => i);
-const MINUTES = [0, 10, 20, 30, 40, 50];
-
-const selectClass =
-  "h-12 w-full rounded-lg border border-zinc-300 bg-background px-2 text-base outline-none focus:border-blue-700 focus:ring-2 focus:ring-blue-700/30 dark:border-zinc-600";
-
-/** 시·분 두 칸으로 시각을 고른다 (분은 10분 단위) */
-function TimePicker({
-  label,
-  value,
-  onChange,
-  hours = HOURS,
-  fixedMinute = false,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  hours?: readonly number[];
-  /** true면 분은 00으로 고정 (시작 시각을 정해진 시(時) 중에서 고를 때) */
-  fixedMinute?: boolean;
-}) {
-  const total = parseTime(value) ?? 0;
-  const h = Math.floor(total / 60);
-  const m = total % 60;
-  return (
-    <div role="group" aria-label={label} className="flex items-center gap-2">
-      <span className="w-12 shrink-0 text-base">{label.split(" ").at(-1)}</span>
-      <select
-        aria-label={`${label} 시`}
-        value={h}
-        onChange={(e) => onChange(formatTime(Number(e.target.value) * 60 + (fixedMinute ? 0 : m)))}
-        className={selectClass}
-      >
-        {hours.map((hour) => (
-          <option key={hour} value={hour}>
-            {pad(hour)}시
-          </option>
-        ))}
-      </select>
-      {fixedMinute ? (
-        <span className="w-full text-center text-base text-zinc-600 dark:text-zinc-400">00분</span>
-      ) : (
-        <select
-          aria-label={`${label} 분`}
-          value={m}
-          onChange={(e) => onChange(formatTime(h * 60 + Number(e.target.value)))}
-          className={selectClass}
-        >
-          {MINUTES.map((minute) => (
-            <option key={minute} value={minute}>
-              {pad(minute)}분
-            </option>
-          ))}
-        </select>
-      )}
-    </div>
-  );
-}
-
 interface Props {
   pattern: PatternId;
   department: Department;
@@ -149,7 +89,7 @@ export default function StepShiftTimes({ pattern, department, value, onChange, o
         const range = value[kind] ?? DEFAULT_SHIFT_TIMES[kind];
         const duration = shiftDurationMinutes(range.start, range.end);
         const free = kind === "야간" && freeNight;
-        const startHours = kind === "당직" || free ? HOURS : START_HOUR_CHOICES[kind];
+        const startHours = kind === "당직" || free ? ALL_HOURS : START_HOUR_CHOICES[kind];
         const fixedStartMinute = kind !== "당직" && !free;
         const askMeal = kind !== "당직" && needsMealChoice(range);
         const nextDay = (parseTime(range.end) ?? 0) <= (parseTime(range.start) ?? 0);
