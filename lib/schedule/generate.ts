@@ -88,13 +88,21 @@ export function plannedDays(
 }
 
 /**
- * 한 달 계산에 필요한 날짜 범위: 그 달 1일이 속한 주의 일요일 ~ 말일이 속한 주의 토요일.
- * 달을 걸친 주의 40시간 누적을 이어서 세기 위해 앞뒤 주까지 포함한다 (규칙 8).
- * 달력 화면도 같은 범위(일~토 줄 맞춤)를 쓴다.
+ * 한 달 계산 범위: 그 달 1일 ~ 말일 (28·29·30·31일, 규칙 8).
+ * 다른 달 날짜는 계산에 넣지 않는다.
  */
 export function monthCalcRange(year: number, month: number): { from: DateString; to: DateString } {
   const dates = datesInMonth(year, month);
-  const from = weekStart(dates[0]);
-  const to = addDays(weekStart(dates[dates.length - 1]), 6);
-  return { from, to };
+  return { from: dates[0], to: dates[dates.length - 1] };
+}
+
+/**
+ * 주 40시간 누적을 시작하는 날 (규칙 4·8).
+ * 한 주는 일~토지만, 달이 바뀌면 누적을 새로 센다.
+ * 예: 2026-10-01(목)~10-03(토)은 9/27이 아니라 10/1부터 센다.
+ */
+export function accumulationWeekStart(date: DateString): DateString {
+  const sunday = weekStart(date);
+  const firstOfMonth = `${date.slice(0, 7)}-01`;
+  return sunday < firstOfMonth ? firstOfMonth : sunday;
 }

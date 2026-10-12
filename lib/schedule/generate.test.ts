@@ -1,7 +1,7 @@
 // lib/schedule 시험 — 패턴 순환, 거꾸로 순환, 일근, 등록 이력(적용일), 한 달 계산 범위
 import { describe, expect, it } from "vitest";
 import type { Profile } from "../types";
-import { monthCalcRange, plannedDay, plannedDays, profileOnDate } from "./generate";
+import { accumulationWeekStart, monthCalcRange, plannedDay, plannedDays, profileOnDate } from "./generate";
 import { timedKindsInPattern } from "./patterns";
 
 const NO_HOLIDAYS = new Set<string>();
@@ -113,18 +113,44 @@ describe("등록 이력 (규칙 16 — 적용일)", () => {
   });
 });
 
-describe("한 달 계산 범위 (앞뒤 주 포함, 규칙 8)", () => {
-  it("2026년 10월: 9/27(일) ~ 10/31(토)", () => {
-    expect(monthCalcRange(2026, 10)).toEqual({ from: "2026-09-27", to: "2026-10-31" });
+describe("한 달 계산 범위 = 매달 1일 ~ 말일 (규칙 8)", () => {
+  it.each([
+    [2026, 1, "2026-01-31", 31],
+    [2026, 2, "2026-02-28", 28],
+    [2028, 2, "2028-02-29", 29], // 윤년
+    [2026, 4, "2026-04-30", 30],
+    [2026, 10, "2026-10-31", 31],
+    [2026, 11, "2026-11-30", 30],
+    [2026, 12, "2026-12-31", 31],
+  ])("%i년 %i월: 1일 ~ %s (%i일)", (year, month, last, count) => {
+    const { from, to } = monthCalcRange(year, month);
+    expect(from).toBe(`${year}-${String(month).padStart(2, "0")}-01`);
+    expect(to).toBe(last);
+    expect(plannedDays([profile({})], from, to, NO_HOLIDAYS)).toHaveLength(count);
+  });
+});
+
+describe("주 40시간 누적 시작일 (일~토, 달이 바뀌면 새로)", () => {
+  it("달 중간의 주는 그 주 일요일부터", () => {
+    expect(accumulationWeekStart("2026-10-07")).toBe("2026-10-04");
   });
 
-  it("2026년 11월: 11/1(일) ~ 12/5(토)", () => {
-    expect(monthCalcRange(2026, 11)).toEqual({ from: "2026-11-01", to: "2026-12-05" });
+  it("달을 걸친 주는 그 달 1일부터 새로 센다", () => {
+    // 2026-10-01(목)이 있는 주: 9/27(일)이 아니라 10/1부터
+    expect(accumulationWeekStart("2026-10-01")).toBe("2026-10-01");
+    expect(accumulationWeekStart("2026-10-03")).toBe("2026-10-01");
+    // 그 다음 주는 다시 일요일부터
+    expect(accumulationWeekStart("2026-10-04")).toBe("2026-10-04");
   });
 
-  it("범위 안의 날짜를 하나도 빠짐없이 만든다", () => {
-    const { from, to } = monthCalcRange(2026, 10);
-    expect(plannedDays([profile({})], from, to, NO_HOLIDAYS)).toHaveLength(35);
+  it("월말 쪽 주는 말일에서 끊긴다 (다음 달 날짜는 다음 달 누적)", () => {
+    // 2026-11-29(일) ~ 11-30(월)은 11월 누적, 12-01(화)부터는 12월 누적
+    expect(accumulationWeekStart("2026-11-30")).toBe("2026-11-29");
+    expect(accumulationWeekStart("2026-12-01")).toBe("2026-12-01");
+  });
+
+  it("1일이 일요일이면 그날부터", () => {
+    expect(accumulationWeekStart("2026-11-01")).toBe("2026-11-01");
   });
 });
 
