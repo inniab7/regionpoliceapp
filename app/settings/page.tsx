@@ -6,6 +6,7 @@ import BackupPanel from "@/components/settings/BackupPanel";
 import HolidayEditor from "@/components/settings/HolidayEditor";
 import OtherTeamsEditor from "@/components/settings/OtherTeamsEditor";
 import ProfileSummary from "@/components/settings/ProfileSummary";
+import ResetButton from "@/components/settings/ResetButton";
 
 export const metadata: Metadata = {
   title: "설정",
@@ -14,7 +15,10 @@ export const metadata: Metadata = {
 export default function SettingsPage() {
   return (
     <section>
-      <h1 className="text-2xl font-bold">설정</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold">설정</h1>
+        <ResetButton />
+      </div>
 
       <h2 className="mt-6 text-lg font-bold">내 등록 정보</h2>
       <div className="mt-2">

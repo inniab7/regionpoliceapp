@@ -51,6 +51,11 @@ export function useAiConnection(): AiConnectionState {
   }, [raw]);
 }
 
+/** AI 연결 정보가 바뀌었음을 화면에 알린다 (초기화처럼 저장소를 밖에서 직접 지운 뒤에 호출) */
+export function notifyAiConnectionChanged(): void {
+  notify();
+}
+
 /** 연결 정보를 저장하고 화면에 알린다. 성공하면 true */
 export function connectAi(connection: AiConnection): boolean {
   const store = appStore();
