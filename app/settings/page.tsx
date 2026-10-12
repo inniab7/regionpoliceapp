@@ -1,6 +1,7 @@
-// Design Ref: §4.5 — 설정 화면 (/settings). 내 등록 정보와 [변경], 공휴일 편집. AI 연결·백업은 이후 작업에서 채운다.
-// Plan: 작업 2·19·21
+// Design Ref: §4.5 — 설정 화면 (/settings). 내 등록 정보와 [변경], 공휴일 편집, 백업. AI 연결은 이후 작업에서 채운다.
+// Plan: 작업 2·19·21·24
 import type { Metadata } from "next";
+import BackupPanel from "@/components/settings/BackupPanel";
 import HolidayEditor from "@/components/settings/HolidayEditor";
 import ProfileSummary from "@/components/settings/ProfileSummary";
 
@@ -23,7 +24,14 @@ export default function SettingsPage() {
         <HolidayEditor />
       </div>
 
-      <p className="mt-8 text-zinc-600 dark:text-zinc-400">AI 연결과 백업은 준비 중이에요.</p>
+      <h2 id="backup" className="mt-8 scroll-mt-4 text-lg font-bold">
+        백업
+      </h2>
+      <div className="mt-2">
+        <BackupPanel />
+      </div>
+
+      <p className="mt-8 text-zinc-600 dark:text-zinc-400">AI 연결은 준비 중이에요.</p>
     </section>
   );
 }
