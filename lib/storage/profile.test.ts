@@ -67,6 +67,18 @@ describe("입력값 → 등록 정보 (buildProfile)", () => {
     expect(back?.profiles[0].shiftTimes.야간?.start).toBe("18:40");
   });
 
+  it.each(["지구대·파출소", "형사", "수사", "사고조사", "교통관리", "교통안전", "내근", "기타(기동대 등)"] as const)("부서 %s로 저장·불러오기를 통과한다", (department) => {
+    const p = buildProfile({ ...base, department });
+    const data = { version: 1, createdAt: NOW, profiles: [p], overrides: {}, holidaysAdded: [], holidaysRemoved: [], otherTeams: [], memos: [], lastBackupAt: null };
+    expect(parseSavedData(JSON.parse(JSON.stringify(data)))?.profiles[0].department).toBe(department);
+  });
+
+  it("목록에 없는 부서는 저장 데이터 검사에서 거부한다", () => {
+    const p = { ...buildProfile(base), department: "경무" };
+    const data = { version: 1, createdAt: NOW, profiles: [p], overrides: {}, holidaysAdded: [], holidaysRemoved: [], otherTeams: [], memos: [], lastBackupAt: null };
+    expect(parseSavedData(JSON.parse(JSON.stringify(data)))).toBeNull();
+  });
+
   it("10분 단위가 아닌 시작 시각(08:35)은 저장 데이터 검사에서 거부한다", () => {
     const p = buildProfile({ ...base, shiftTimes: { 주간: { start: "08:35", end: "18:00" }, 야간: { start: "18:00", end: "09:00" } } });
     const data = { version: 1, createdAt: NOW, profiles: [p], overrides: {}, holidaysAdded: [], holidaysRemoved: [], otherTeams: [], memos: [], lastBackupAt: null };
