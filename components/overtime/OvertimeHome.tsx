@@ -1,13 +1,12 @@
 // Design Ref: §4.1·§4.2 — 첫 접속(등록 정보 없음)이면 등록 화면으로 안내, 등록되어 있으면 초과근무 화면
-// Plan: 작업 19 — 첫 접속 안내. 달력·결과는 작업 20·23에서 이 자리에 채운다.
+// Plan: 작업 19·20 — 첫 접속 안내, 등록되어 있으면 달력 화면(OvertimeScreen). 결과 4줄은 작업 23.
 "use client";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { profileOn } from "@/lib/storage/store";
 import { useAppData } from "@/lib/storage/useAppData";
-import { todayInKst } from "@/lib/time";
+import OvertimeScreen from "./OvertimeScreen";
 
 export default function OvertimeHome() {
   const router = useRouter();
@@ -50,18 +49,7 @@ export default function OvertimeHome() {
     );
   }
 
-  const profile = profileOn(app.data, todayInKst(new Date())) ?? app.data.profiles.at(-1);
-  if (!profile) return null;
-
-  return (
-    <section>
-      <h1 className="text-2xl font-bold">초과근무</h1>
-      <p className="mt-2 text-base">
-        {profile.agency} {profile.department} {profile.team}
-      </p>
-      <p className="mt-4 text-zinc-600 dark:text-zinc-400">
-        근무표 달력과 이번 달 초과근무 결과가 여기에 표시됩니다. (준비 중)
-      </p>
-    </section>
-  );
+  // 등록한 근무 정보가 있으면 달력 화면 (등록 이력이 비어 있으면 위의 effect가 등록 화면으로 보낸다)
+  if (app.data.profiles.length === 0) return null;
+  return <OvertimeScreen data={app.data} />;
 }
