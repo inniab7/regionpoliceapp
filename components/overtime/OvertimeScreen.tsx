@@ -11,6 +11,7 @@ import { formatShortDate, todayInKst } from "@/lib/time";
 import type { DateString, SavedData } from "@/lib/types";
 import BackupBanner from "./BackupBanner";
 import DayEditSheet from "./DayEditSheet";
+import OtherTeamsCard from "./OtherTeamsCard";
 import MonthCalendar, { CalendarLegend } from "./MonthCalendar";
 import ResultCard from "./ResultCard";
 import TodayCard from "./TodayCard";
@@ -72,6 +73,10 @@ export default function OvertimeScreen({ data }: { data: SavedData }) {
           day={todayMonth.days.find((d) => d.date === today)}
           holidayName={holidayName(today, holidays)}
         />
+      </div>
+
+      <div className="mt-3">
+        <OtherTeamsCard data={data} today={today} holidays={holidays} />
       </div>
 
       {/* 달 이동 */}

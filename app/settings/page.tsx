@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import AiConnectPanel from "@/components/settings/AiConnectPanel";
 import BackupPanel from "@/components/settings/BackupPanel";
 import HolidayEditor from "@/components/settings/HolidayEditor";
+import OtherTeamsEditor from "@/components/settings/OtherTeamsEditor";
 import ProfileSummary from "@/components/settings/ProfileSummary";
 
 export const metadata: Metadata = {
@@ -20,7 +21,14 @@ export default function SettingsPage() {
         <ProfileSummary />
       </div>
 
-      <h2 id="ai" className="mt-8 scroll-mt-4 text-lg font-bold">
+      <h2 id="teams" className="mt-8 scroll-mt-4 text-lg font-bold">
+        다른 팀
+      </h2>
+      <div className="mt-2">
+        <OtherTeamsEditor />
+      </div>
+
+      <h2 id="ai"className="mt-8 scroll-mt-4 text-lg font-bold">
         AI 연결
       </h2>
       <div className="mt-2">
