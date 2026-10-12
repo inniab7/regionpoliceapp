@@ -1,5 +1,5 @@
 // Design Ref: §4.2 — 초과근무 화면: 달 이동, 오늘 근무 카드, 근무표 달력
-// Plan: 작업 20·22 — 근무표 달력과 근무 변경 창. 결과 4줄(작업 23)은 이후에 이 화면에 붙인다.
+// Plan: 작업 20·22·23 — 근무표 달력, 근무 변경 창, 결과 4줄.
 "use client";
 
 import { useMemo, useState } from "react";
@@ -11,6 +11,7 @@ import { formatShortDate, todayInKst } from "@/lib/time";
 import type { DateString, SavedData } from "@/lib/types";
 import DayEditSheet from "./DayEditSheet";
 import MonthCalendar, { CalendarLegend } from "./MonthCalendar";
+import ResultCard from "./ResultCard";
 import TodayCard from "./TodayCard";
 
 /** 내장 공휴일 목록이 있는 해 (그 밖의 해는 공휴일을 직접 추가해야 한다) */
@@ -106,6 +107,8 @@ export default function OvertimeScreen({ data }: { data: SavedData }) {
         <MonthCalendar year={shown.year} month={shown.month} days={dayMap} today={today} onSelect={setSelectedDate} />
         <CalendarLegend />
       </div>
+
+      <ResultCard title={monthLabel(shown)} total={month.total} hasIssues={issueGroups.length > 0} />
 
       {monthHolidays.length > 0 && (
         <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">
