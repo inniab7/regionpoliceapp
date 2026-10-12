@@ -2,6 +2,7 @@
 // Plan: 작업 6 — 기기 저장 모듈 (등록 이력·근무 변경·공휴일·첫 등록일, 저장 형식 버전 포함)
 // 저장된 내용은 사용자가 고칠 수도 있고 망가질 수도 있으므로, 불러올 때마다 모양을 검사한다.
 // 검사 함수(parseSavedData)는 백업 파일 불러오기(작업 24)에서도 그대로 쓴다.
+import { profileOnDate } from "../schedule/generate";
 import { isValidDate, isValidShiftTime } from "../time";
 import {
   DEPARTMENTS,
@@ -71,13 +72,9 @@ export function saveData(store: KeyValueStore, data: SavedData): boolean {
   }
 }
 
-/** 지금 날짜에 적용되는 등록 정보 (적용일이 그 날짜 이하인 것 중 가장 최근, 규칙 16) */
+/** 그 날짜에 적용되는 등록 정보 (규칙 16, 실제 계산은 lib/schedule에서) */
 export function profileOn(data: SavedData, date: string): Profile | null {
-  let found: Profile | null = null;
-  for (const p of data.profiles) {
-    if (p.effectiveFrom <= date && (!found || p.effectiveFrom >= found.effectiveFrom)) found = p;
-  }
-  return found;
+  return profileOnDate(data.profiles, date);
 }
 
 /**
