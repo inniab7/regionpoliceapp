@@ -44,8 +44,8 @@ export default function AiConnectPanel() {
   }
 
   const connection = state.status === "connected" ? state.connection : null;
-  // 고른 적이 없으면 연결된 AI(없으면 ChatGPT)를 보여 준다
-  const selected: AiProvider = provider ?? connection?.provider ?? "chatgpt";
+  // 고른 적이 없으면 연결된 AI(없으면 Gemini)를 보여 준다
+  const selected: AiProvider = provider ?? connection?.provider ?? "gemini";
   const guide = KEY_GUIDES[selected];
   const switching = connection !== null && selected !== connection.provider;
   const showInput = connection === null || switching || apiKey !== "";
@@ -199,6 +199,15 @@ export default function AiConnectPanel() {
         <li>ⓘ 키는 이 기기에만 저장되고, 현답 서버로 보내지 않아요. 백업 파일에도 들어가지 않아요.</li>
         <li>ⓘ 사용료는 고른 AI 회사가 키 주인에게 따로 청구해요.</li>
       </ul>
+      {selected === "gemini" && (
+        <p className="mt-2 rounded-lg bg-blue-50 p-3 text-sm text-blue-900 dark:bg-blue-950 dark:text-blue-200">
+          💡 Gemini는 <b>Google AI Studio에서 무료로 API 키를 만들 수 있어요.</b> 카드 등록 없이 시작할 수 있어요. 무료 사용 한도와 조건은 구글 정책에 따라 바뀔 수 있고,
+          무료로 쓸 때는 입력한 내용이 구글 서비스 개선에 쓰일 수 있으니 구글 약관을 꼭 확인하세요.{" "}
+          <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="font-bold underline">
+            무료 키 만들러 가기
+          </a>
+        </p>
+      )}
       <p className="mt-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">
         ⚠ 여럿이 같이 쓰는 기기에서는 쓰고 나서 [연결 끊기]를 눌러 주세요.
       </p>

@@ -168,7 +168,7 @@ export interface SavedData {
 
 // ─── 기기 저장: AI 연결 (백업 파일에 넣지 않음) ───────────
 
-export const AI_PROVIDERS = ["chatgpt", "gemini", "claude"] as const;
+export const AI_PROVIDERS = ["gemini", "chatgpt", "claude"] as const;
 export type AiProvider = (typeof AI_PROVIDERS)[number];
 
 /** 화면에 보여 줄 AI 이름 */

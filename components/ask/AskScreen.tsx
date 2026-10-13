@@ -5,9 +5,11 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ask, MAX_QUESTION_CHARS } from "@/lib/ai/ask";
+import { FIELD_JUDGMENT_NOTICE, NOT_FOUND_MESSAGE } from "@/lib/ai/check";
 import { MAX_HISTORY, type HistoryTurn } from "@/lib/ai/prompt";
-import { NOT_CONNECTED_VIEW, toView, type AskView, type NoticeAction } from "@/lib/ai/messages";
+import { toView, type AskView, type NoticeAction } from "@/lib/ai/messages";
 import { loadLawsOnce } from "@/lib/laws/load";
+import { lookupArticles, type LookupResult } from "@/lib/laws/lookup";
 import { buildSearchIndex, type LoadedLaw, type SearchIndex } from "@/lib/laws/search";
 import { useAiConnection } from "@/lib/storage/useAiConnection";
 import { AI_PROVIDER_LABELS } from "@/lib/types";
@@ -17,10 +19,13 @@ type LawsState =
   | { status: "ready"; laws: LoadedLaw[]; index: SearchIndex }
   | { status: "failed" };
 
+/** AI 없이 조문만 찾은 결과 (AI를 연결하지 않았을 때) */
+type LookupView = { kind: "lookup"; result: LookupResult };
+
 interface Turn {
   id: number;
   question: string;
-  view: AskView;
+  view: AskView | LookupView;
 }
 
 /** "2026-07-01" → "2026년 7월 1일" */
@@ -60,7 +65,8 @@ export default function AskScreen() {
   }, [turns.length, sending]);
 
   const connection = connState.status === "connected" ? connState.connection : null;
-  const ready = connection !== null && lawsState.status === "ready";
+  const lawsReady = lawsState.status === "ready";
+  const ready = connection !== null && lawsReady;
   const length = text.trim().length;
   const tooLong = length > MAX_QUESTION_CHARS;
 
@@ -94,10 +100,24 @@ export default function AskScreen() {
     }
   }
 
+  /** AI를 연결하지 않았을 때: 등록된 법령에서 조문만 찾아 보여 준다 (AI·서버로 보내지 않는다) */
+  function lookup(question: string) {
+    if (lawsState.status !== "ready") return;
+    setBlockNotice(null);
+    const result = lookupArticles(lawsState.index, question);
+    if (result.kind === "privacy") {
+      setBlockNotice(result.message);
+      return;
+    }
+    setTurns((ts) => [...ts, { id: nextId.current++, question, view: { kind: "lookup", result } }]);
+    setText("");
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (length === 0 || tooLong) return;
-    void send(text.trim());
+    if (connection) void send(text.trim());
+    else lookup(text.trim());
   }
 
   return (
@@ -144,7 +164,9 @@ export default function AskScreen() {
       <div className="mt-4 space-y-4" aria-live="polite">
         {turns.length === 0 && !sending && connState.status !== "loading" && (
           <p className="text-zinc-600 dark:text-zinc-400">
-            등록된 법령 안에서 찾아 출처와 함께 알려 드려요. 예) 음주운전 기준이 어떻게 되나요?
+            {connection
+              ? "등록된 법령 안에서 찾아 출처와 함께 알려 드려요. 예) 음주운전 기준이 어떻게 되나요?"
+              : "AI 연결 없이도 등록된 법령에서 관련 조문을 찾아 그대로 보여 드려요. 예) 음주운전 기준이 어떻게 되나요?"}
           </p>
         )}
         {turns.map((t) => (
@@ -164,17 +186,7 @@ export default function AskScreen() {
       {/* 하단 고정 입력창 (하단 메뉴 바로 위) */}
       <div className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-10 border-t border-black/10 bg-background dark:border-white/15">
         <div className="mx-auto max-w-md px-4 py-2">
-          {connState.status === "loading" ? null : connection === null ? (
-            <div>
-              <p className="text-base">{NOT_CONNECTED_VIEW.kind === "notice" ? NOT_CONNECTED_VIEW.message : ""}</p>
-              <Link
-                href="/settings#ai"
-                className="mt-2 flex h-12 items-center justify-center rounded-lg bg-blue-700 text-base font-bold text-white dark:bg-blue-500"
-              >
-                AI 연결하기
-              </Link>
-            </div>
-          ) : (
+          {connState.status === "loading" ? null : (
             <form onSubmit={handleSubmit}>
               {blockNotice && (
                 <p role="alert" className="mb-2 rounded-lg bg-red-50 p-2 text-sm text-red-900 dark:bg-red-950 dark:text-red-200">
@@ -195,15 +207,23 @@ export default function AskScreen() {
                 />
                 <button
                   type="submit"
-                  disabled={!ready || length === 0 || tooLong || sending !== null}
+                  disabled={!(connection ? ready : lawsReady) || length === 0 || tooLong || sending !== null}
                   className="h-12 shrink-0 rounded-lg bg-blue-700 px-4 text-base font-bold text-white disabled:opacity-40 dark:bg-blue-500"
                 >
-                  보내기
+                  {connection ? "보내기" : "조문 찾기"}
                 </button>
               </div>
               <p className={`mt-1 text-xs ${tooLong ? "font-bold text-red-600 dark:text-red-400" : "text-zinc-600 dark:text-zinc-400"}`}>
                 {length}/{MAX_QUESTION_CHARS}자 · 이름·주민번호·전화번호·차량번호는 적지 마세요
               </p>
+              {!connection && (
+                <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
+                  조문만 보여 드려요. 요약 답변을 받으려면{" "}
+                  <Link href="/settings#ai" className="font-bold text-blue-700 underline dark:text-blue-400">
+                    AI 연결하기
+                  </Link>
+                </p>
+              )}
             </form>
           )}
         </div>
@@ -229,6 +249,16 @@ const ACTION_LABELS: Record<NoticeAction, string> = {
 
 function TurnView({ turn, onRetry, busy }: { turn: Turn; onRetry: () => void; busy: boolean }) {
   const v = turn.view;
+  if (v.kind === "lookup") {
+    return (
+      <div>
+        <Question text={turn.question} />
+        <div className="mt-2 text-base">
+          <LookupResultView result={v.result} />
+        </div>
+      </div>
+    );
+  }
   return (
     <div>
       <Question text={turn.question} />
@@ -278,6 +308,29 @@ function TurnView({ turn, onRetry, busy }: { turn: Turn; onRetry: () => void; bu
       </div>
     </div>
   );
+}
+
+function LookupResultView({ result }: { result: LookupResult }) {
+  if (result.kind === "found") {
+    return (
+      <div className="space-y-2">
+        {result.items.map((it) => (
+          <details key={`${it.law}-${it.no}`} className="rounded-2xl rounded-bl-sm bg-zinc-100 px-3 py-2 dark:bg-zinc-800">
+            <summary className="cursor-pointer font-bold">
+              📎 {it.law} {it.no}
+              {it.title ? `(${it.title})` : ""}
+            </summary>
+            <p className="mt-2 whitespace-pre-wrap text-sm">{it.text}</p>
+            <p className="mt-2 text-xs text-zinc-700 dark:text-zinc-300">{koreanDate(it.baseDate)} 기준 법령</p>
+          </details>
+        ))}
+        <p className="text-xs text-zinc-600 dark:text-zinc-400">조문을 눌러 전문을 볼 수 있어요. 이 결과는 AI가 아니라 검색으로 찾은 조문이에요.</p>
+        <FieldNotice text={FIELD_JUDGMENT_NOTICE} />
+      </div>
+    );
+  }
+  const message = result.kind === "not-found" ? NOT_FOUND_MESSAGE : "질문을 확인해 주세요 (1~500자)";
+  return <p className="rounded-2xl rounded-bl-sm bg-zinc-100 px-3 py-2 dark:bg-zinc-800">🔎 {message}</p>;
 }
 
 function FieldNotice({ text }: { text: string }) {
