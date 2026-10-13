@@ -26,6 +26,16 @@ describe("결과 3줄", () => {
   });
 });
 
+describe("기본 초과의 근거 표시", () => {
+  it("이번 달 근무와 월 기준을 함께 보여 준다", () => {
+    const rows = resultRows({ basic: 0, night: 0, holiday: 0 }, { countedMinutes: 128 * 60, baseMinutes: 160 * 60 });
+    expect(rows[0].hint).toBe("이번 달 근무 128시간 00분 · 월 기준 160시간 00분");
+  });
+  it("근거 값이 없으면 기본 문구", () => {
+    expect(resultRows({ basic: 0, night: 0, holiday: 0 })[0].hint).toBe("월 기준시간을 넘은 근무");
+  });
+});
+
 describe("휴일 일수 병기 (8시간 = 1일)", () => {
   it("8시간을 1일로 계산한다", () => {
     expect(HOLIDAY_DAY_MINUTES).toBe(480);
@@ -62,10 +72,12 @@ describe("실제 월간 계산 결과와 이어 보기", () => {
     shiftTimes: { 주간: { start: "09:00", end: "18:00" }, 야간: { start: "18:00", end: "09:00" } },
   };
 
-  it("시험 사례 1(패턴 2, 2026년 10월)은 3 / 54 / 48시간(휴일 6일)으로 보인다", () => {
+  it("시험 사례 1(패턴 2, 2026년 10월)은 0 / 54 / 48시간(휴일 6일)으로 보인다", () => {
     const r = calculateMonth({ year: 2026, month: 10, profiles: [patrol], overrides: {}, holidays: effectiveHolidays() });
-    expect(resultRows(r.total).map((x) => x.text)).toEqual(["3시간 00분", "54시간 00분", "48시간 00분"]);
+    expect(resultRows(r.total).map((x) => x.text)).toEqual(["0시간 00분", "54시간 00분", "48시간 00분"]);
     expect(resultRows(r.total)[2].note).toBe("(6일)");
-    expect(r.total.sum).toBe(105 * 60); // 합계는 계산·시험에만 남아 있고 화면에는 보이지 않는다
+    expect(r.total).not.toHaveProperty("sum"); // 합계는 없다 (야간은 기본 초과와 겹쳐서 세기 때문)
+    expect(r.countedMinutes).toBe(128 * 60); // 근무 176시간 − 휴일 인정 48시간
+    expect(r.baseMinutes).toBe(160 * 60);
   });
 });

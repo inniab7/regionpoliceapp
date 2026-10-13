@@ -1,7 +1,7 @@
 // Design Ref: §5.2 ① — 등록 이력(적용일별)·공휴일로 날짜별 근무를 만든다
 // Plan: 작업 7 — 패턴 → 날짜별 근무 생성 (규칙 13·16)
 // 순수 함수: 저장소·현재 시각을 쓰지 않는다. 공휴일 목록은 호출하는 쪽에서 넘긴다.
-import { addDays, datesInMonth, diffDays, isWeekend, weekStart } from "../time";
+import { addDays, datesInMonth, diffDays, isWeekend } from "../time";
 import type { DateString, DayKind, Profile, TimeRange } from "../types";
 import { DAY_SHIFT_FIXED_TIME, DUTY_DEFAULT_TIME, profileCycle } from "./patterns";
 
@@ -100,24 +100,4 @@ export function plannedDays(
 export function monthCalcRange(year: number, month: number): { from: DateString; to: DateString } {
   const dates = datesInMonth(year, month);
   return { from: dates[0], to: dates[dates.length - 1] };
-}
-
-/**
- * 주 40시간 누적을 시작하는 날 (규칙 4·8).
- * 한 주는 일~토지만, 달이 바뀌면 누적을 새로 센다.
- * 예: 2026-10-01(목)~10-03(토)은 9/27이 아니라 10/1부터 센다.
- */
-export function accumulationWeekStart(date: DateString): DateString {
-  const sunday = weekStart(date);
-  const firstOfMonth = `${date.slice(0, 7)}-01`;
-  return sunday < firstOfMonth ? firstOfMonth : sunday;
-}
-
-/** 주 누적이 끝나는 날: 그 주 토요일, 단 말일을 넘지 않는다 (규칙 8) */
-export function accumulationWeekEnd(date: DateString): DateString {
-  const saturday = addDays(weekStart(date), 6);
-  const [y, m] = date.split("-").map(Number);
-  const dates = datesInMonth(y, m);
-  const lastOfMonth = dates[dates.length - 1];
-  return saturday > lastOfMonth ? lastOfMonth : saturday;
 }

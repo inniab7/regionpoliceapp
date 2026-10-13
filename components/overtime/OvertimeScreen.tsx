@@ -118,7 +118,12 @@ export default function OvertimeScreen({ data }: { data: SavedData }) {
         <CalendarLegend />
       </div>
 
-      <ResultCard title={monthLabel(shown)} total={month.total} hasIssues={issueGroups.length > 0} />
+      <ResultCard
+        title={monthLabel(shown)}
+        total={month.total}
+        basis={{ countedMinutes: month.countedMinutes, baseMinutes: month.baseMinutes }}
+        hasIssues={issueGroups.length > 0}
+      />
 
       {monthHolidays.length > 0 && (
         <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">

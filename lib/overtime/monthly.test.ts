@@ -1,4 +1,4 @@
-// lib/overtime/monthly.ts 시험 — 근무표 + 근무 변경 + 공휴일 → 그 달 결과 4줄과 문제 안내
+// lib/overtime/monthly.ts 시험 — 근무표 + 근무 변경 + 공휴일 → 그 달 결과 3줄과 문제 안내
 import { describe, expect, it } from "vitest";
 import { effectiveHolidays } from "../holidays/kr";
 import type { DayEntry, Profile } from "../types";
@@ -40,25 +40,33 @@ describe("월간 집계 기본", () => {
 
   it("일근만 한 달: 결과 0, 문제 없음 (공휴일 10/5·10/9는 휴무)", () => {
     const r = october([office]);
-    expect(r.total).toEqual({ basic: 0, night: 0, holiday: 0, sum: 0 });
+    expect(r.total).toEqual({ basic: 0, night: 0, holiday: 0 });
+    expect(r.baseMinutes).toBe(h(160)); // 평일 22일 − 공휴일 2일(10/5·10/9) = 20일 × 8시간
+    expect(r.countedMinutes).toBe(h(160)); // 일근 20일 × 8시간 = 기준과 같다
     expect(r.issues).toEqual([]);
     expect(r.days.find((d) => d.date === "2026-10-09")).toMatchObject({ plannedKind: "휴무", holidayName: "한글날" });
   });
 
-  it("합계 = 기본 초과 + 야간 + 휴일", () => {
-    const { total } = october([patrol]);
-    expect(total.sum).toBe(total.basic + total.night + total.holiday);
+  it("기본 초과 = 그 달 근무시간 − 월 기준시간 (0보다 클 때만)", () => {
+    for (const profiles of [[patrol], [office]]) {
+      const r = october(profiles);
+      expect(r.total.basic).toBe(Math.max(0, r.countedMinutes - r.baseMinutes));
+    }
+  });
+
+  it("합계는 계산 결과에 없다 (야간은 기본 초과와 겹쳐서 세므로 더하면 이중으로 들어간다)", () => {
+    expect(october([patrol]).total).not.toHaveProperty("sum");
   });
 });
 
 describe("일근 초과근무 (추가 근무, 규칙 13·14)", () => {
-  it("10/12~16(월~금) 40시간 + 금요일 18~21시 초과근무 → 기본 초과 2시간", () => {
+  it("일근 20일(월 기준 160시간) + 금요일 18~21시 초과근무(공제 후 2시간) → 기본 초과 2시간", () => {
     const r = october([office], { "2026-10-16": { extra: { start: "18:00", end: "21:00" } } });
-    expect(r.total).toEqual({ basic: h(2), night: 0, holiday: 0, sum: h(2) });
+    expect(r.total).toEqual({ basic: h(2), night: 0, holiday: 0 });
     expect(r.days.find((d) => d.date === "2026-10-16")!.hasExtra).toBe(true);
   });
 
-  it("공휴일 낀 주(10/5·10/9)는 기준 24시간 → 평일 24시간 + 초과근무 2시간 = 기본 초과 2시간 (규칙 4)", () => {
+  it("평일 공휴일(10/5·10/9)이 낀 달도 기준은 160시간이라 일근 20일 + 초과근무 2시간 = 기본 초과 2시간 (규칙 4)", () => {
     const r = october([office], { "2026-10-08": { extra: { start: "18:00", end: "21:00" } } });
     expect(r.total.basic).toBe(h(2));
   });
@@ -83,7 +91,7 @@ describe("일근 초과근무 (추가 근무, 규칙 13·14)", () => {
 });
 
 describe("휴가·교육출장 (규칙 4)", () => {
-  it("근무일 휴가는 근무 대신 주 누적 8시간", () => {
+  it("근무일 휴가는 근무 대신 그 달 근무시간 8시간", () => {
     const r = october([office], { "2026-10-12": { replace: { type: "휴가" } } });
     const d = r.days.find((x) => x.date === "2026-10-12")!;
     expect(d).toMatchObject({ replacedBy: "휴가", workedMinutes: 0 });
@@ -95,8 +103,8 @@ describe("휴가·교육출장 (규칙 4)", () => {
     expect(r.issues).toEqual([expect.objectContaining({ code: "LEAVE_ON_OFF_DAY" })]);
   });
 
-  it("교육·출장은 입력한 실제 시간으로 계산: 금요일 09~21시 → 40시간 넘은 3시간이 기본 초과", () => {
-    // 10/12~15 32시간 + 10/16 교육 09~21시(공제 후 11시간) = 43시간
+  it("교육·출장은 입력한 실제 시간으로 계산: 금요일 09~21시 → 정해진 8시간보다 3시간 많아 기본 초과 3시간", () => {
+    // 일근 20일 160시간에서 10/16을 교육 09~21시(공제 후 11시간)로 바꿈 → 163시간
     const r = october([office], { "2026-10-16": { replace: { type: "교육출장", start: "09:00", end: "21:00" } } });
     expect(r.total.basic).toBe(h(3));
     expect(r.days.find((d) => d.date === "2026-10-16")!.replacedBy).toBe("교육출장");
@@ -111,10 +119,11 @@ describe("휴가·교육출장 (규칙 4)", () => {
 describe("당직·휴일·등록 정보", () => {
   it("패턴 4(당직·휴무·비번): 당직은 24시간 근무로 계산 (규칙 12)", () => {
     // 당직 11번(10/1·4·7·…·31), 매번 09:00~다음 날 09:00, 식사 공제 후 23시간(야간 8시간)
-    // 손계산: 기본 초과 27(주별 3+13+3+3+5), 야간 88(8×11), 휴일 32(10/4·10·25·31 각 8) → 147
+    // 손계산: 근무 11번 × 23시간 = 253시간 − 휴일 인정 32시간(10/4·10·25·31 각 8) = 221시간 → 기준 160시간을 넘은 기본 초과 61
+    //        야간 88(8×11), 휴일 32
     const duty: Profile = { ...patrol, pattern: 4, shiftTimes: {} };
     const r = october([duty]);
-    expect(r.total).toEqual({ basic: h(27), night: h(88), holiday: h(32), sum: h(147) });
+    expect(r.total).toEqual({ basic: h(61), night: h(88), holiday: h(32) });
     expect(r.issues).toEqual([]);
     const oct1 = r.days.find((d) => d.date === "2026-10-01")!;
     expect(oct1).toMatchObject({ plannedKind: "당직", workedMinutes: h(23), night: h(8) });
@@ -129,7 +138,7 @@ describe("당직·휴일·등록 정보", () => {
     expect(r.issues).toEqual([]);
   });
 
-  it("당직일에 휴가를 넣으면 근무 대신 주 누적 8시간", () => {
+  it("당직일에 휴가를 넣으면 근무 대신 그 달 근무시간 8시간", () => {
     const duty: Profile = { ...patrol, pattern: 4, shiftTimes: {} };
     const r = october([duty], { "2026-10-13": { replace: { type: "휴가" } } });
     expect(r.days.find((d) => d.date === "2026-10-13")).toMatchObject({ replacedBy: "휴가", workedMinutes: 0 });
@@ -148,7 +157,7 @@ describe("당직·휴일·등록 정보", () => {
 
   it("등록 정보가 없으면 안내하고 결과 0", () => {
     const r = october([]);
-    expect(r.total.sum).toBe(0);
+    expect(r.total).toEqual({ basic: 0, night: 0, holiday: 0 });
     expect(r.issues.map((i) => i.code)).toEqual(["NO_PROFILE"]);
   });
 
