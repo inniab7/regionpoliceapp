@@ -1,11 +1,11 @@
-// Design Ref: §5.2 ①~⑦ — 등록 이력·근무 변경·공휴일 → 그 달 결과 4줄
-// Plan: 작업 13 — 월간 집계 (규칙 8·14, 매달 1일~말일)
+// Design Ref: §5.2 ①~⑦ — 등록 이력·근무 변경·공휴일 → 그 달 결과 3줄(기본 초과·야간·휴일)
+// Plan: 작업 13 — 월간 집계 (규칙 4·8·14, 매달 1일~말일, 기본 초과는 월 기준시간 초과분)
 // 순수 함수: 화면은 이 결과만 받아 그린다. 잘못된 입력은 계산에서 빼고 issues로 알려 준다.
 import { holidayName as nameOfHoliday } from "../holidays/kr";
 import { monthCalcRange, plannedDay } from "../schedule/generate";
 import { addDays, formatShortDate } from "../time";
 import type { DateString, DayEntry, DayKind, Profile } from "../types";
-import { allocate, type Breakdown, type DayWork } from "./allocate";
+import { allocate, monthlyBaseMinutes, type Breakdown, type DayWork } from "./allocate";
 import { isRestDay } from "./holiday";
 import { buildShift, shiftsOverlap, type Shift } from "./shift";
 
@@ -54,8 +54,12 @@ export interface MonthDay extends Breakdown {
 }
 
 export interface MonthResult {
-  /** 결과 4줄 (분) */
-  total: Breakdown & { sum: number };
+  /** 결과 3줄 (분): 기본 초과·야간·휴일 */
+  total: Breakdown;
+  /** 그 달 근무시간 합계(분): 휴일 인정 시간은 빼고, 휴가는 8시간으로 센 값 */
+  countedMinutes: number;
+  /** 그 달 기본근무시간(분) = 평일(월~금) 중 공휴일이 아닌 날 × 8시간 */
+  baseMinutes: number;
   days: MonthDay[];
   issues: Issue[];
 }
@@ -81,7 +85,7 @@ function regularShiftOf(input: MonthInput, date: DateString): Shift | null {
   return plannedShift(input, date);
 }
 
-/** 그 달 결과 4줄과 달력용 날짜별 정보 */
+/** 그 달 결과 3줄과 달력용 날짜별 정보 */
 export function calculateMonth(input: MonthInput): MonthResult {
   const { from, to } = monthCalcRange(input.year, input.month);
   const issues: Issue[] = [];
@@ -105,7 +109,7 @@ export function calculateMonth(input: MonthInput): MonthResult {
       // 등록 정보가 없는 날은 계산하지 않는다 (첫 등록 전)
     } else if (entry?.replace?.type === "휴가") {
       if (isWorkDay) {
-        creditDay = true; // 주 40시간에 8시간 (규칙 4)
+        creditDay = true; // 그 달 근무시간에 8시간 (규칙 4)
         replacedBy = "휴가";
       } else {
         issue(date, "LEAVE_ON_OFF_DAY", `${formatShortDate(date)}은 쉬는 날이라 휴가를 넣을 수 없어요.`);
@@ -160,11 +164,11 @@ export function calculateMonth(input: MonthInput): MonthResult {
     issue(from, "NO_PROFILE", "이 달에 적용되는 등록 정보가 없어요. 먼저 근무를 등록해 주세요.");
   }
 
-  const allocation = allocate(works, input.holidays);
+  const allocation = allocate(works, input.holidays, monthlyBaseMinutes(from, to, input.holidays));
   const days: MonthDay[] = meta.map((m, i) => {
     const a = allocation.days[i];
     return { ...m, basic: a.basic, night: a.night, holiday: a.holiday, workedMinutes: a.workedMinutes };
   });
 
-  return { total: allocation.total, days, issues };
+  return { total: allocation.total, countedMinutes: allocation.countedMinutes, baseMinutes: allocation.baseMinutes, days, issues };
 }

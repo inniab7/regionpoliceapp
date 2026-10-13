@@ -83,17 +83,17 @@ describe("계산 결과가 기존 패턴과 똑같다", () => {
     }
   });
 
-  it("10월 결과가 손계산(기본 초과 3 · 야간 54 · 휴일 48 · 합계 105시간)과 같다", () => {
+  it("10월 결과가 손계산(기본 초과 0 · 야간 54 · 휴일 48시간)과 같다", () => {
     const r = calculateMonth({ profiles: [custom(["주간", "야간", "비번", "휴무"])], overrides: {}, holidays, year: 2026, month: 10 });
-    expect(r.total).toMatchObject({ basic: 3 * 60, night: 54 * 60, holiday: 48 * 60, sum: 105 * 60 });
+    expect(r.total).toEqual({ basic: 0, night: 54 * 60, holiday: 48 * 60 });
   });
 
-  it("일근을 섞은 순환도 근무일은 주 누적에 8시간씩 반영된다 (평일 일근 5일 + 주말 휴무 = 초과 0)", () => {
+  it("일근만 있는 순환도 근무일은 그 달 근무시간에 8시간씩 반영된다 (평일 일근 22일 = 월 기준 22일 → 초과 0)", () => {
     // 월~금 일근, 토·일 휴무 순환을 월요일(10/5가 공휴일이라 10/12)부터
     const mine = custom(["일근", "일근", "일근", "일근", "일근", "휴무", "휴무"], "2026-10-12", { 일근: { start: "09:00", end: "18:00" } });
     const r = calculateMonth({ profiles: [mine], overrides: {}, holidays: NO_HOLIDAYS, year: 2026, month: 10 });
     // 10/12~10/30 중 일근 날의 시간: 하루 식사 공제 후 8시간 → 주 40시간 이내라 기본 초과 0, 야간 0, 휴일 0
-    expect(r.total).toMatchObject({ basic: 0, night: 0, holiday: 0, sum: 0 });
+    expect(r.total).toEqual({ basic: 0, night: 0, holiday: 0 });
   });
 });
 

@@ -1,18 +1,20 @@
 // Design Ref: §4.2 — 결과 3줄(기본 초과·야간·휴일, 휴일은 일수 병기)과 "참고용 계산" 안내 문구
 // Plan: 작업 23 — 결과 화면. 보고 있는 달의 1일~말일 결과이며, 근무를 바꾸면 바로 달라진다.
-import { RESULT_DISCLAIMER, resultRows } from "@/lib/overtime/result";
+import { RESULT_DISCLAIMER, resultRows, type ResultBasis } from "@/lib/overtime/result";
 import type { Breakdown } from "@/lib/overtime/allocate";
 
 interface Props {
   /** 예: "2026년 10월" */
   title: string;
   total: Breakdown;
+  /** 기본 초과가 나온 근거 (그 달 근무시간과 월 기준시간) */
+  basis?: ResultBasis;
   /** 확인이 필요해 계산에서 빠진 입력이 있는지 */
   hasIssues: boolean;
 }
 
-export default function ResultCard({ title, total, hasIssues }: Props) {
-  const rows = resultRows(total);
+export default function ResultCard({ title, total, basis, hasIssues }: Props) {
+  const rows = resultRows(total, basis);
 
   return (
     <section aria-labelledby="resultTitle" className="mt-5 rounded-lg border border-zinc-300 p-3 dark:border-zinc-600">

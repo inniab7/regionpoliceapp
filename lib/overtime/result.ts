@@ -28,8 +28,16 @@ export interface ResultRow {
   note?: string;
 }
 
+/** 기본 초과가 어떻게 나왔는지 보여 줄 값 (분) */
+export interface ResultBasis {
+  /** 그 달 근무시간 합계: 휴일 인정 시간은 빼고, 휴가는 8시간으로 센 값 */
+  countedMinutes: number;
+  /** 월 기준시간 = 평일(월~금) 중 공휴일이 아닌 날 × 8시간 */
+  baseMinutes: number;
+}
+
 /** 결과는 항상 이 3줄이다 (규칙 1): 기본 초과 · 야간 · 휴일(일수 병기) */
-export function resultRows(total: Breakdown): ResultRow[] {
+export function resultRows(total: Breakdown, basis?: ResultBasis): ResultRow[] {
   const row = (key: ResultRow["key"], label: string, hint: string, minutes: number): ResultRow => ({
     key,
     label,
@@ -38,8 +46,15 @@ export function resultRows(total: Breakdown): ResultRow[] {
     text: formatDuration(minutes),
   });
   return [
-    row("basic", "기본 초과", "주 기준시간을 넘은 근무", total.basic),
-    row("night", "야간", "22:00~06:00 근무", total.night),
+    row(
+      "basic",
+      "기본 초과",
+      basis
+        ? `이번 달 근무 ${formatDuration(basis.countedMinutes)} · 월 기준 ${formatDuration(basis.baseMinutes)}`
+        : "월 기준시간을 넘은 근무",
+      total.basic,
+    ),
+    row("night", "야간", "22:00~06:00에 일한 시간 (기본 초과와 따로 표시)", total.night),
     { ...row("holiday", "휴일", "토·일·공휴일 근무 (하루 8시간까지)", total.holiday), note: formatHolidayDays(total.holiday) },
   ];
 }
